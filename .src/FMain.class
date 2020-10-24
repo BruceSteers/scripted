@@ -15,6 +15,7 @@ Public bFileIsGambas As Boolean = False
 Public Sub Form_Open()
 Dim i As Integer, a As Array
 
+SrchBox.Tag = 0
 FuncGview.Font = Font[Settings["List/Font", FuncGview.Font.ToString()]]
 FuncGview.Columns.Count = 2
 FuncGview.Columns[0].Text = "Num"
@@ -514,6 +515,7 @@ Select Key.Code
     Case Key.BackSpace, Key.Del
       If TextEditor1.Count <> textLines Then ReadtoList()
 End Select
+SrchBox.Tag = TextEditor1.Line
 End
 
 
@@ -581,25 +583,47 @@ Public Sub MenuCloseB_Click()
 End
 
 Public Sub Btn_Search_Click()
-Dim old_ln As Integer
+Dim bBackToStart As Boolean = False
 
 If Me.SrchBox.Text = "" Then Return
-old_ln = TextEditor1.Line
- Dim LN As Integer = TextEditor1.FindNextString(SrchBox.Text, TextEditor1.ToPos(TextEditor1.Line, TextEditor1.Column + 1))
 
- If LN <> -1 Then 
- Dim CN As Integer = InStr(TextEditor1[LN].Text, SrchBox.Text, IIf(old_ln <> LN, 0, TextEditor1.Column + 1)) - 1
- TextEditor1.GotoCenter(CN, LN)
- TextEditor1.Select(CN, LN, CN + SrchBox.Text.Len, LN)
+Dim i, iPos, iLPos, iCPos As Integer, sLine As String, aStr As String[]
+aStr = Split(TextEditor1.Text, gb.Lf)
+iLPos = TextEditor1.Line
+iCPos = TextEditor1.Column
 
- Else
+BeginSearch:
+For i = iLPos To aStr.Max
+iCPos = InStr(aStr[i], SrchBox.Text, iCPos + 1, gb.IgnoreCase)
+If iCPos > 0 Then
+  iLPos = i
+  Break
+Endif
+Next
+
+If iCPos = 0 Then 
+  If Not bBackToStart Then
+    iLPos = 0
+    bBackToStart = True
+    Goto BeginSearch
+  Else
    Balloon("Not found", Btn_Search)
- Endif
+   Return
+  Endif
+Endif
+TextEditor1.GotoCenter(iCPos - 1, iLPos)
+TextEditor1.Select(iCPos - 1, iLPos, iCPos + (SrchBox.Text.Len - 1), iLPos)
 
 End
 
 Public Sub BtnExecCom_Click()
 
   MenuShel_Click()
+
+End
+
+Public Sub SrchBox_Activate()
+
+  Btn_Search_Click()
 
 End

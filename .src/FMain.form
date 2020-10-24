@@ -152,6 +152,7 @@
     }
     { SrchBox TextBox
       MoveScaled(40,0,20,5)
+      Tag = "0"
       Alignment = Align.Right
     }
     { Btn_Search ToolButton
@@ -173,6 +174,8 @@
       Background = &HA7C0C0&
       PopupMenu = "MenuEd"
       ShowPreview = True
+      ShowPosition = True
+      ShowLimit = True
       ShowCurrent = True
       ShowLineNumber = True
       ShowBraces = True

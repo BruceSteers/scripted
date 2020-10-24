@@ -2,7 +2,7 @@
 Title=ScriptED
 Startup=Start
 Icon=.pencil.png
-Version=0.0.50
+Version=0.0.51
 Component=gb.args
 Component=gb.image
 Component=gb.gui
