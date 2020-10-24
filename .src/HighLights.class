@@ -80,10 +80,10 @@ End
 Public Sub Btn_Save_Click()
   Dim c As Integer
   For c = 0 To Grid1.Rows.Max
-    Settings["Highlights/" & Grid1[c, 2].Text] = Grid1[c, 1].Text
-    HighLights.Close()
+    Settings["Highlights/" & Grid1[c, 2].Text] = Val(Grid1[c, 1].Text)
   Next
 
+    HighLights.Close()
 End
 
 Public Sub Grid1_Sort()

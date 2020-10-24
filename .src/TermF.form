@@ -4,6 +4,7 @@
   MoveScaled(0,0,109,42)
   Text = ("JumpEd Terminal")
   Icon = Picture["icon:/32/terminal"]
+  Stacking = Window.Above
   Arrangement = Arrange.Vertical
   { HBox1 HBox
     MoveScaled(0,0,109,4)

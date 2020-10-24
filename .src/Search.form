@@ -1,0 +1,38 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,63,28)
+  Resizable = False
+  Arrangement = Arrange.Vertical
+  Spacing = True
+  Margin = True
+  { TextBox1 TextBox
+    MoveScaled(6,1,50,5)
+  }
+  { CheckBox1 CheckBox
+    MoveScaled(5,7,31,5)
+    Text = ("Match Case")
+  }
+  { CheckBox2 CheckBox
+    MoveScaled(5,12,31,5)
+    Text = ("Search Backwards")
+  }
+  { HBox1 HBox
+    MoveScaled(0,23,62,4)
+    Spacing = True
+    { Panel1 Panel
+      MoveScaled(4,0,4,4)
+      Expand = True
+    }
+    { btnOK Button
+      MoveScaled(29,0,16,4)
+      Text = ("OK")
+      Default = True
+    }
+    { btnCancel Button
+      MoveScaled(46,0,16,4)
+      Text = ("Cancel")
+      Cancel = True
+    }
+  }
+}

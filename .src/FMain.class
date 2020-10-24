@@ -24,8 +24,6 @@ FuncGview.Columns[1].Text = "Line"
 FuncGview.Columns.Sort = 1
 FuncGviewWidth = Settings["View/FuncListWidth", 200]
 Me.Menu_ImportG3.Value = Settings["View/UseG3Theme", False]
-TextEditor1.ShowLineNumber = Settings["View/ShowLines", False] 
-Me.MenuShowLines.Value = TextEditor1.ShowLineNumber
 TextEditor1.ShowPreview = Settings["View/ShowPreview", True]
 Me.MenuPrBar.Value = TextEditor1.ShowPreview
 TextEditor1.Wrap = Settings["View/WordWrap", False] 
@@ -38,9 +36,10 @@ System.Shell = "bash"
 If Menu_ImportG3.Value Then 
  ImportG3()
 Else
- TextEditor1.Font = Font[Settings["View/Font", TextEditor1.Font.ToString()]]
  LoadHighlights()
 Endif
+
+ TextEditor1.Font = Font[Settings["View/Font", TextEditor1.Font.ToString()]]
 
 a = Settings["Config/WinDims", [20, 20, Screen.Width / 2, Screen.Height / 2]]
 Me.Move(a[0], a[1], a[2], a[3])
@@ -51,7 +50,7 @@ MenuHL.Children[i].Checked = True
 TextEditor1.Highlight = IIf(i = 0, "", HighList[i])
 
 If LoadOnStart <> "" Then 
-Object.Lock(TextEditor1)
+ Object.Lock(TextEditor1)
  TextEditor1.Load(LoadOnStart)
  Object.UnLock(TextEditor1)
  LoadedFile = LoadOnStart
@@ -60,6 +59,9 @@ Object.Lock(TextEditor1)
  ReadtoList()
  TextEditor1.Refresh()
 Endif
+
+TextEditor1.ShowLineNumber = Settings["View/ShowLines", False] 
+Me.MenuShowLines.Value = TextEditor1.ShowLineNumber
 
 End
 
@@ -428,6 +430,7 @@ Dialog.Font = TextEditor1.Font
 If Dialog.SelectFont() Then Return
 TextEditor1.Font = Dialog.Font
 Settings["View/Font"] = Dialog.Font.ToString()
+Settings.Save()
 End
 
 Public Sub MenuEdBG_Click()
@@ -459,10 +462,14 @@ End
 
 Public Sub Menu_ImportG3_Click()
 If Last.Value Then 
+If Not Exist(User.Home &/ ".config/gambas3/gambas3.conf") Then
+  Message.Error("Gambas3 configuration not found.")
+  Last.Value = 0
+Endif
  ImportG3()
 Else
  TextEditor1.Font = Font[Settings["View/Font", TextEditor1.Font.ToString()]]
- TextEditor1.Styles[Highlight.Background].Color = Settings["View/BGCol", TextEditor1.Styles[Highlight.Background].Color]
+ LoadHighlights()
 Endif
 Settings["View/UseG3Theme"] = Last.Value
 End
@@ -544,6 +551,9 @@ With TermF.TView
 .Clear()
  ' If Not p Then p = .Exec(["bash"])
 TermF.Show()
+TermF.Activate()
+TermF.TView.SetFocus()
+
 Wait 0.5
 '.Input("cd " & Quote(File.Dir(LoadedFile)) & "\n")
 .Clear()
@@ -587,7 +597,7 @@ Dim bBackToStart As Boolean = False
 
 If Me.SrchBox.Text = "" Then Return
 
-Dim i, iPos, iLPos, iCPos As Integer, sLine As String, aStr As String[]
+Dim i, iLPos, iCPos As Integer, aStr As String[]
 aStr = Split(TextEditor1.Text, gb.Lf)
 iLPos = TextEditor1.Line
 iCPos = TextEditor1.Column
