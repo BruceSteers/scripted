@@ -1,0 +1,26 @@
+' Gambas class file
+
+
+Public Sub Form_Open()
+Me.Left = Settings["Term/Left", Me.Left]
+Me.Top = Settings["Term/Top", Me.Top]
+TermF.Width = Settings["Term/Width", TermF.Width]
+TermF.Height = Settings["Term/Height", TermF.Height]
+TView.SetFocus()
+End
+
+Public Sub Form_Close()
+Settings["Term/Left"] = Me.Left
+Settings["Term/Top"] = Me.Top
+Settings["Term/Width"] = TermF.Width
+Settings["Term/Height"] = TermF.Height
+If FMain.p Then FMain.p.Kill()
+End
+
+
+Public Sub ToolButton1_Click()
+
+  Me.TView.Kill()
+  Me.Close()
+
+End

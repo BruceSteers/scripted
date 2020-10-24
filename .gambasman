@@ -1,0 +1,5 @@
+# GambasMan settings for ScriptED
+[Project]
+ExeName="ScriptED.gambas"
+PCODE=-1
+

@@ -1,0 +1,26 @@
+# Gambas Project File 3.0
+Title=ScriptED
+Startup=Start
+Icon=.pencil.png
+Version=0.0.47
+Component=gb.args
+Component=gb.image
+Component=gb.gui
+Component=gb.form
+Component=gb.desktop
+Component=gb.eval
+Component=gb.eval.highlight
+Component=gb.util
+Component=gb.form.editor
+Component=gb.settings
+Component=gb.term
+Component=gb.form.terminal
+Component=gb.mime
+ArgumentList=[["/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"],["/etc/fstab"],["/run/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"]]
+CurrentArgumentList=["/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"]
+Environment="GB_PCODE_VERSION=3.8"
+TabSize=2
+Language=en_GB
+ControlPublic=1
+ModulePublic=1
+Packager=1

@@ -1,0 +1,45 @@
+' Gambas module file
+
+Public goroot As Boolean = False
+
+Public Sub Main()
+Dim s As String, la As String[]
+'Args.Begin()
+Args.Begin(Application.Name & " <option> file")
+
+s = Args.Get("f", "file", "File to open", "file")
+If s <> "" Then FMain.LoadOnStart = s
+
+ goroot = Args.Has("r", "root", "Open as root")
+
+ If Args.Has("h", "help", "Show Help") Then
+Print "JumpED V" & Application.Version
+Print ""
+  Return
+ Endif
+
+la = Args.End()
+
+If la.Count <> 0 Then
+If Exist(la[0]) Then FMain.LoadOnStart = la[0]
+Endif
+
+' TEST FILE
+'FMain.LoadOnStart = "/etc/fstab"
+'FMain.LoadOnStart = Application.Path &/ "gambas3-update-compile-and-install"
+
+If Exist(FMain.LoadOnStart) Then 
+ If Access(FMain.LoadOnStart, gb.Write) = False Then goroot = True
+Endif
+
+If goroot Then 
+
+ If GRoot.GetRoot(FMain.LoadOnStart) Then
+  If (Not GRoot.Cancelled) Or (GRoot.WindowCancelled) Then Return
+ Endif
+Endif
+'Debug GRoot.Cancelled
+FMain.Show()
+  
+End
+

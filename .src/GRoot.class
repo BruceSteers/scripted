@@ -1,0 +1,209 @@
+' Gambas class file
+
+Export
+Create Static
+
+' Pretty simple GUI sudo enabler.
+' Just add the following commented Sub to your applications FMain.class file and add
+' the gb.form.terminal component in the project settings.
+' (See the ReadMe.txt for more info)
+
+' <AuthFile> argumnent if given will only ask for root if 
+' supplied file path needs it For "Write" access.
+
+' Public Sub _new()
+' If GRoot.GetRoot() Then Me.Close()
+' End
+
+
+Public Cancelled As Boolean = True
+Public WindowCancelled As Boolean = False
+
+Private Relaunching As Boolean = False
+Private Working As Boolean = True
+Private fWindow As Form
+Private mbPass As MaskBox
+Private pEx As Process
+Private CheckAuth As String
+
+Public Sub GetRoot(Optional AuthFile As String = "") As Boolean
+
+If User.Name = "root" Then 
+ SetState(False, False, False)
+ Return False
+Endif
+
+If AuthFile <> "" Then
+ If Access(AuthFile, gb.Write) = True Then 
+  SetState(False, False, False)
+  Return False
+  Else
+    CheckAuth = AuthFile
+ Endif
+Endif
+
+
+AskPass()
+
+While Working = True
+  Wait 0.5
+Wend
+Return (Relaunching Or Cancelled)
+End
+
+Private Sub SetState(bWorking As Boolean, bCancelled As Boolean, bRelaunching As Boolean)
+Working = bWorking
+Cancelled = bCancelled
+Relaunching = bRelaunching
+End
+
+
+Private Sub AskPass()
+Dim lb As Label, btn As Button, hb As HBox
+With fWindow = New Form As "FWIN"
+.Width = 400
+.Height = fWindow.Font.TextHeight("A") + 20
+.Arrangement = Arrange.Vertical
+'.AutoResize = True
+.Stacking = Window.Above
+.TopOnly = True
+.Spacing = True
+.Padding = 10
+End With
+With lb = New Label(fWindow)
+  .Text = Application.Name & " Requested to run as root.  (leave blank to open as you)\n" & IIf(CheckAuth = "", "Please enter password...", "To edit the file...\n " & CheckAuth[0, Min(CheckAuth.Len, 100)])
+  .Font.Size = "12"
+
+  .Width = .Font.TextWidth(.Text) + 10
+  .Height = .Font.TextHeight(.Text) + 10
+  .Alignment = Align.Center
+End With
+fWindow.Width = lb.Font.TextWidth(lb.Text) + 20
+hb = New HBox(fWindow)
+hb.width = 400
+hb.Spacing = True
+hb.Height = fWindow.Font.TextHeight("A") + 10
+
+With lb = New Label(hb)
+  .Text = "Root Password"
+  .Font.Size = "12"
+  .Width = .Font.TextWidth(.Text) + 15
+  .Alignment = Align.Center
+End With
+With mbPass = New MaskBox(hb) As "MASK"
+  .Password = True
+  .Height = fWindow.Font.TextHeight("AB") + 10
+ .Expand = True
+End With
+With btn = New Button(hb) As "VBTN"
+  .Picture = Stock["24/watch"]
+  .AutoResize = True
+End With
+With btn = New Button(hb) As "BTN"
+  .Text = "Ok"
+  .Picture = Stock["24/ok"]
+'  .Width = 70
+  .AutoResize = True
+End With
+fWindow.Height = fWindow.Children[0].Height + fWindow.Children[1].Height + fWindow.Font.TextHeight("A")
+fWindow.Show()
+End
+
+Public Sub MASK_Activate()
+  BTN_Click()
+End
+
+
+Public Sub FWIN_Close()
+If Working Then WindowCancelled = True
+Working = False
+End
+
+Public Sub VBTN_MouseDown()
+mbPass.Password = False
+End
+Public Sub VBTN_MouseUp()
+mbPass.Password = True
+mbPass.SetFocus()
+End
+
+Public Sub BTN_Click()
+If mbPass.Text = "" Then
+SetState(False, True, False)
+fWindow.Close()
+Return
+Endif
+
+Dim aArgs As String[]
+fWindow.Hide()
+aArgs = Args.All.Copy()
+
+If File.Ext(aArgs[0]) <> "gambas" Then aArgs[0] &= ".gambas" ' (only needed when running from IDE)
+
+ If Left(aArgs[0], 2) = "./" Then 
+   aArgs[0] = Application.ParentHandle &/ Right(aArgs[0], -2)
+ Else If InStr(aArgs[0], "/") = 0 Then 
+   aArgs[0] = Application.Path &/ aArgs[0]
+ Endif
+ 
+aArgs.Add("sudo", 0)
+If Not RunCommand(aArgs) Then
+SetState(IIf(fWindow.Tag = "retry", True, False), True, False)
+Else
+SetState(False, False, True)
+Endif
+If Not Cancelled Then fWindow.Close()
+'If fWindow Then fWindow.Delete()
+End
+
+Private Sub RunCommand(aAgs As String[]) As Boolean
+
+If Not Exist(aAgs[1]) Then
+  Message("command not found!\n" & aAgs[1])
+  Return False
+Endif
+
+Dim TermV As TerminalView, frm As Form
+frm = New Form
+frm.Width = 500
+frm.Height = 100
+frm.Arrangement = Arrange.Fill
+TermV = New TerminalView(frm)
+TermV.Width = 400
+TermV.Expand = True
+TermV.Visible = True
+ ' comment out the following line to view output errors and lock the shell running from terminal
+ ' being a GUI sudoer it souldnt need to be run from teminal as you can just use sudo instead
+ ' it will ask for password but output terminal messages wont show unless you omit the next line.
+'Application.Daemon = True
+frm.Utility = True
+pEx = TermV.Exec(aAgs)
+
+Wait 0.1
+
+TermV.Input(mbPass.Text & gb.Lf)
+ Wait 0.1
+While pEx.State = Process.Running
+  Wait 1
+  'Debug TermV.Text
+  If InStr(TermV.Text, "\n") Then
+   If Split(TermV.Text, "\n")[1] Begins "[sudo]" Then
+    If pEx Then pEx.Kill()
+    frm.Delete()
+    fWindow.Tag = "retry"
+    SetState(True, True, False)
+    fWindow.Show()
+    Balloon("Incorrect Password\nPlease try again...", mbPass)
+    Return False
+   Endif
+  Endif
+  TermV.Clear()
+Wend
+
+frm.Delete()
+Return True
+Catch
+  Message.Error("An error occured..\n" & Error.Text & "\n" & Error.Where)
+'If frm Then frm.Delete()
+Return False
+ End

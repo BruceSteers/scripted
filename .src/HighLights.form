@@ -1,0 +1,35 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,88,54)
+  Arrangement = Arrange.Vertical
+  { HPanel1 Panel
+    MoveScaled(1,0,87,48)
+    Expand = True
+    Arrangement = Arrange.Horizontal
+    { Grid1 GridView
+      MoveScaled(0,0,29,48)
+      Mode = Select.Single
+      Header = GridView.Horizontal
+      ScrollBar = Scroll.Vertical
+    }
+    { ColorChooser1 ColorChooser
+      MoveScaled(37,0,49,48)
+      Expand = True
+    }
+  }
+  { HBox1 HBox
+    MoveScaled(8,49,73,5)
+    { Btn_Save Button
+      MoveScaled(1,0,15,4)
+      Text = ("Save")
+    }
+    { Spring1 Spring
+      MoveScaled(28,1,4,3)
+    }
+    { Btn_Revert Button
+      MoveScaled(48,0,15,4)
+      Text = ("Revert")
+    }
+  }
+}

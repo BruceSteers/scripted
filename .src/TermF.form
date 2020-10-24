@@ -1,0 +1,43 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,109,42)
+  Text = ("JumpEd Terminal")
+  Icon = Picture["icon:/32/terminal"]
+  Arrangement = Arrange.Vertical
+  { HBox1 HBox
+    MoveScaled(0,0,109,4)
+    Spacing = True
+    { ToolButton3 ToolButton
+      MoveScaled(1,0,4,4)
+      Picture = Picture["icon:/24/save-as"]
+    }
+    { Separator1 Separator
+      MoveScaled(5,0,2,3)
+    }
+    { ToolButton4 ToolButton
+      MoveScaled(15,0,4,4)
+      Picture = Picture["icon:/24/copy"]
+    }
+    { ToolButton2 ToolButton
+      MoveScaled(24,0,4,4)
+      Picture = Picture["icon:/24/copy"]
+    }
+    { ToolButton5 ToolButton
+      MoveScaled(32,0,4,4)
+      Picture = Picture["icon:/24/clear"]
+    }
+    { Spring1 Spring
+      MoveScaled(76,1,4,2)
+    }
+    { ToolButton1 ToolButton
+      MoveScaled(104,0,4,4)
+      Picture = Picture["icon:/24/close"]
+    }
+  }
+  { TView TerminalView
+    MoveScaled(0,4,108,37)
+    Expand = True
+    AutoResize = False
+  }
+}

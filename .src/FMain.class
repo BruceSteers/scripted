@@ -1,0 +1,572 @@
+' Gambas class file
+
+Public LoadOnStart As String = ""
+Public LoadedFile As String
+Public TextBU As String
+Public p As Process
+Public FuncGviewWidth As Integer
+Public HighList As String[] = ["None", "Gambas", "JavaScript", "HTML", "CSS", "C", "C++", "SQL", "diff", "SH", "Custom"]
+Public LastHL As String
+Public HighlightStr As String[] = ["Background", "Normal", "Keyword", "Function", "Operator", "Symbol", "Number", "String", "Comment", "Breakpoint", "Current", "Datatype", "Selection", "Highlight", "CurrentLine", "Error", "Help", "Preprocessor", "Escape", "Label", "Constant", "Custom"]
+Public textLines As Integer
+Public SearchStr As String = ""
+
+Public Sub Form_Open()
+Dim i As Integer, a As Array
+
+FuncGview.Font = Font[Settings["List/Font", FuncGview.Font.ToString()]]
+FuncGview.Columns.Count = 2
+FuncGview.Columns[0].Text = "Num"
+FuncGview.Columns[0].width = FuncGview.Font.TextWidth("000") + 5
+FuncGview.Columns[1].Text = "Line"
+FuncGview.Columns.Sort = 1
+FuncGviewWidth = Settings["View/FuncListWidth", 200]
+Me.Menu_ImportG3.Value = Settings["View/UseG3Theme", False]
+TextEditor1.ShowLineNumber = Settings["View/ShowLines", False] 
+Me.MenuShowLines.Value = TextEditor1.ShowLineNumber
+TextEditor1.ShowPreview = Settings["View/ShowPreview", True]
+Me.MenuPrBar.Value = TextEditor1.ShowPreview
+TextEditor1.Wrap = Settings["View/WordWrap", False] 
+TextEditor1.CloseBraces = Settings["Edit/CloseBraces", False]
+Me.MenuCloseB.Value = TextEditor1.CloseBraces
+TextEditor1.CloseStrings = Settings["Edit/CloseStrings", False]
+Me.MenuCloseS.Value = TextEditor1.CloseStrings
+Balloon.Delay = 2000
+System.Shell = "bash"
+If Menu_ImportG3.Value Then 
+ ImportG3()
+Else
+ TextEditor1.Font = Font[Settings["View/Font", TextEditor1.Font.ToString()]]
+ LoadHighlights()
+Endif
+
+a = Settings["Config/WinDims", [20, 20, Screen.Width / 2, Screen.Height / 2]]
+Me.Move(a[0], a[1], a[2], a[3])
+
+Object.Lock(ComboBox2)
+ComboBox2.Index = 1
+Object.UnLock(ComboBox2)
+
+
+MakeMenus(Me.MenuHL, "MNU_Mode_", HighList, True) 
+i = Settings["View/Highlight", 0]
+MenuHL.Children[i].Checked = True
+TextEditor1.Highlight = IIf(i = 0, "", HighList[i])
+
+If LoadOnStart <> "" Then 
+Object.Lock(TextEditor1)
+ TextEditor1.Load(LoadOnStart)
+ Object.UnLock(TextEditor1)
+ LoadedFile = LoadOnStart
+ TextBU = TextEditor1.Text
+ CheckFileType()
+ ReadtoList()
+ TextEditor1.Refresh()
+Endif
+
+End
+
+Public Sub LoadHighlights()
+  Dim c, dc, def As Integer
+  For c = 0 To HighlightStr.Max
+    dc = IIf(HighlightStr[c] = "Custom", Highlight.Custom, c)
+    def = TextEditor1.Styles[dc].Color
+    TextEditor1.Styles[dc].Color = Settings["Highlights/" & HighlightStr[c], def]
+  Next
+  
+End
+
+
+Public Sub CheckFileType()
+  
+  If File.Ext(LoadedFile) = "vb" Then
+   Object.Lock(ComboBox2)
+   ComboBox2.Index = 1
+   Object.UnLock(ComboBox2)
+   Else
+  Endif
+
+ Me.Menu_gbs.Visible = (File.Ext(LoadedFile) = "gbs")
+  
+End
+
+
+Public Sub MakeMenus(ByRef ParentMenu As Menu, prefix As String, items As String[], Optional radioType As Boolean = False)
+Dim s As String, NewMen As Menu, i As Integer = 0
+For Each s In items
+With NewMen = New Menu(ParentMenu) As "CustomMenu"
+ .Name = prefix & s
+ .Caption = s
+ .Tag = i
+If radioType Then .Radio = True
+End With
+i += 1
+Next
+With NewMen = New Menu(ParentMenu) As "SetCol"
+ .Caption = "Set Colours"
+End With
+
+End
+
+Public Sub SetCol_Click()
+  
+  HighLights.Show()
+  
+End
+
+
+Public Sub CustomMenu_Click()
+Dim c As Integer
+
+Select Split(Last.Name, "_")[1]
+  Case "Mode"
+If Lower(Last.Text) = "gambas" Then
+  If Message.Warning("Setting Gambas highlight on normal text will reformat it.", "Cancel", "ok") = 1 Then
+    MenuHL.Children[1].Checked = False
+    For c = 0 To MenuHL.Children.Count - 1 
+     If MenuHL.Children[c].Text = LastHL Then
+     MenuHL.Children[c].Checked = True
+     Return
+     Endif
+    Next
+  Stop Event
+  Return
+  Endif
+Endif
+
+LastHL = Last.Text
+TextEditor1.Highlight = IIf(Last.text = "None", "", Lower(Last.text))
+Settings["View/Highlight"] = Last.Tag
+End Select
+  Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+End
+
+
+Public Sub Form_Close()
+If TermF.Visible Then TermF.Close()
+If HighLights.Visible Then HighLights.Close()
+Settings["Config/WinDims"] = [Me.Left, Me.Top, Me.Width, Me.Height]
+'If Comp(TextBU, TextEditor1.Text, gb.Match) Then
+If TextBU <> TextEditor1.Text Then
+ Me.Tag = Message.Warning("Text has changed, would you like to save it?", "Save", "Forget", "Don't Quit")
+  If Me.Tag = 1 Then
+    Btn_Save_Click()
+ Else If Me.Tag = 3 Then
+   Stop Event
+   Return
+  Endif
+Endif
+If p Then p.Kill()
+End
+
+
+Public Sub ReadtoList()
+Dim s As String, a As Array, ln As Integer = 1, ins As Integer
+
+ Me.Title = "[" & User.Name & "]" & LoadedFile
+
+a = Split(TextEditor1.Text, "\n")
+textLines = a.Count
+FuncGview.Clear()
+FuncGview.Rows.Count = 1
+FuncGview.Refresh()
+FuncGview[0, 0].Text = "1"
+FuncGview[0, 1].Text = "Top of file"
+
+For Each s In a
+ Select ComboBox2.Index
+ Case 1
+  ins = InStr(word1(s), "()")
+ Case 2
+  ins = InStr(s, ") {")
+ Case 3
+  s = Trim(s)
+  ins = InStr(s, "Public Sub ")
+  If ins <> 1 Then ins = InStr(s, "Private Sub ")
+  If ins <> 1 Then ins = InStr(s, "Public Function ")
+  If ins <> 1 Then ins = InStr(s, "Private Function ")
+  If ins <> 1 Then ins = InStr(s, "Sub ")
+  If ins <> 1 Then ins = InStr(s, "Function ")
+  If ins <> 1 Then ins = 0
+ End Select
+
+  If ins > 0 Then
+    FuncGview.Rows.Count += 1
+    FuncGview[FuncGview.Rows.Max, 0].Text = Str(ln)
+    FuncGview[FuncGview.Rows.Max, 1].Text = s
+    ins = 0
+  Endif
+
+ln += 1
+Next
+
+  If FuncGview.Rows.Count = 1 Then
+    Balloon("No search resulst for " & ComboBox2.Text, ComboBox2)
+   If ComboBox2.Index <> ComboBox2.List.Max Then
+    Object.Lock(ComboBox2)
+    ComboBox2.Index += 1
+    Object.UnLock(ComboBox2)
+    ReadtoList()
+    Return
+   Endif
+  Endif
+
+FuncGview.Rows.Count += 1
+FuncGview[FuncGview.Rows.Max, 0].Text = Str(ln - 1)
+FuncGview[FuncGview.Rows.Max, 1].Text = "Bottom of file"
+FuncGview.Columns.Ascending = True
+FuncGview.Refresh()
+FuncGview_Sort()
+End
+
+Public Function word1(st As String) As String
+Dim rs As String
+If st = "" Then Return "na"
+rs = IIf(InStr(st, " "), Split(st, " ")[0], st)
+Return rs
+End
+
+
+Public Sub Btn_Open_Click()
+Dialog.Title = "Open file..."
+Dialog.ShowHidden = True
+Dialog.Path = LoadedFile
+If Dialog.OpenFile() Then Return
+If TextEditor1.Highlight = "gambas" Then TextEditor1.Highlight = ""
+TextEditor1.Load(Dialog.Path)
+ LoadedFile = Dialog.Path
+ TextBU = TextEditor1.Text
+CheckFileType()
+ReadtoList()
+End
+
+Public Sub Form_Resize()
+'VSplit1.Layout = [40, Me.Height - 40]
+HSplit1.Layout = [FMain.Width - FuncGviewWidth, FuncGviewWidth]
+FMain.Refresh()
+'HSplit2.Layout = [Me.width - 150, 150]
+'VSplit2.Layout = [VSplit1.Layout.First - 40, 40]
+End
+
+Public Sub FuncGview_Sort()
+  If FuncGview.Rows.Count = 0 Then Return
+  
+  Dim Values, ValueSorted As New String[]
+  Dim TandB As New String[][], sel As String = ""
+  Dim Nx, iNx As Integer
+
+  ' Load sort column into string array
+If FuncGView.Row >= 0 Then sel = FuncGView[FuncGView.Row, 0].Text
+
+TandB.Add([FuncGView[0, 0].Text, FuncGView[0, 1].Text])
+TandB.Add([FuncGView[FuncGView.Rows.Max, 0].Text, FuncGView[FuncGView.Rows.Max, 1].Text])
+FuncGView.Rows.Remove(0)
+FuncGView.Rows.Remove(FuncGView.Rows.Max)
+FuncGView.Refresh()
+
+  For Nx = 0 To FuncGView.Rows.Max
+    Values.Add(FuncGView[Nx, FuncGView.Columns.Sort].Text)
+  Next
+
+  ' Copy values to new array and sort it based on status of sort indicator
+  ValueSorted = Values.Copy()
+  ValueSorted.Sort(IIf(FuncGView.Columns.Ascending, gb.Ascent Or gb.IgnoreCase, gb.Descent Or gb.IgnoreCase))
+
+  ' Iterate through table swapping appropriate values
+  For Nx = 0 To ValueSorted.Max
+    For iNx = 0 To FuncGView.Columns.Max 
+      Swap FuncGView[Nx, iNx].Text, FuncGView[Values.Find(ValueSorted[Nx], 0, Nx), iNx].Text
+    Next
+
+    ' Pick up new order to preserve proper handling of indexing and duplicate values
+    Values.Clear()
+    For iNx = 0 To FuncGView.Rows.Max
+      Values.Add(FuncGView[iNx, FuncGView.Columns.Sort].Text)
+    Next
+  Next
+FuncGView.Rows.Insert(0)
+FuncGView[0, 0].Text = TandB[0][0]
+FuncGView[0, 1].Text = TandB[0][1]
+FuncGView.Rows.Insert(FuncGView.Rows.Count)
+FuncGView[FuncGView.Rows.Max, 0].Text = TandB[1][0]
+FuncGView[FuncGView.Rows.Max, 1].Text = TandB[1][1]
+
+  If sel <> "" Then
+    For iNx = 0 To FuncGView.Rows.Max
+     If sel = FuncGView[iNx, 0].Text Then FuncGView.Rows[iNx].Selected = True
+    Next
+  Endif
+
+FuncGView.Refresh()
+
+
+  
+End
+
+Public Sub FuncGview_Select()
+'TextEditor1.Goto(0, Val(FuncGview[FuncGview.Row, 0].Text) - 1, False)
+TextEditor1.GotoCenter(0, Val(FuncGview[FuncGview.Row, 0].Text) - 1)
+TextEditor1.SetFocus()
+End
+
+Public Sub ComboBox2_Click()
+If ComboBox2.Index = 0 Then Return
+
+ComboBox2.Tag = ComboBox2.Index
+ReadtoList()
+ComboBox2.Index = 0
+End
+
+
+Public Sub MenuOpARThis_Click(Optional FileName As String = "")
+Dim s As String
+
+  If User.Name <> "root" Then
+  s = Args[0]
+   If s[0, 2] = "./" 
+    s = Application.Path & "/" & s[2, s.Len - 2]
+   Else If InStr(Args[0], "/") = 0 Then
+    s = Application.Path & "/" & s
+   Endif
+
+  Shell Quote(s) & " -r -f '" & IIf(FileName = "", LoadedFile, FileName) & "'"
+  If Message.Question("Close this window?", "Yes", "No") = 1 Then Quit
+  Endif
+End
+
+
+Public Sub Btn_Save_Click(Optional quiet As Boolean = False)
+If TextEditor1.Text = TextBU Then
+  If Not quiet Then Balloon("File not changed so\nnot saved", Me.Btn_Save)
+  Return
+Endif
+  File.Save(LoadedFile, TextEditor1.Text)
+  If Not quiet Then Balloon("File saved okay", Me)
+  TextBU = TextEditor1.Text
+Catch
+  Message.Error(Error.Text)
+End
+
+Public Sub Btn_SaveAs_Click()
+Dialog.Title = "Save file as.."
+Dialog.Path = LoadedFile
+If Dialog.SaveFile() Then Return
+File.Save(Dialog.Path, TextEditor1.Text)
+LoadedFile = Dialog.Path
+TextBU = TextEditor1.Text
+Me.Title = LoadedFile
+Catch
+  Message.Error(Error.Text)
+End
+
+Public Sub MenuSave_Click()
+Btn_Save_Click()
+End
+
+Public Sub MenuSavAs_Click()
+Btn_SaveAs_Click()
+End
+
+Public Sub MenuOp_Click()
+Btn_Open_Click()
+End
+
+Public Sub MenuOpARReq_Click()
+Dialog.Title = "Open file (as root)..."
+If Dialog.OpenFile() Then Return
+MenuOpARThis_Click(Dialog.Path)
+End
+
+Public Sub MenuQuit_Click()
+Me.Close()
+End
+
+Public Sub MenuListFont_Click()
+Dialog.Font = FuncGview.Font
+If Dialog.SelectFont() Then Return
+FuncGview.Font = Dialog.Font
+Settings["List/Font"] = Dialog.Font.ToString()
+End
+
+Public Sub MenuEdFnt_Click()
+Dialog.Font = TextEditor1.Font
+If Dialog.SelectFont() Then Return
+TextEditor1.Font = Dialog.Font
+Settings["View/Font"] = Dialog.Font.ToString()
+End
+
+Public Sub MenuEdBG_Click()
+Dialog.Color = TextEditor1.Background
+If Dialog.SelectColor() Then Return
+TextEditor1.Styles[Highlight.Background].Color = Dialog.Color
+Settings["View/BGCol"] = Dialog.Color
+End
+
+Public Sub MenuWWrap_Click()
+TextEditor1.Wrap = Last.Value
+Settings["View/WordWrap"] = TextEditor1.Wrap
+End
+
+Public Sub Menu_gbs_Click()
+
+
+End
+
+Public Sub MenuPrBar_Click()
+TextEditor1.ShowPreview = Last.Value
+Settings["View/ShowPreview"] = TextEditor1.ShowPreview
+End
+Public Sub MenuShowLines_Click()
+TextEditor1.ShowLineNumber = Last.Value
+Settings["View/ShowLines"] = TextEditor1.ShowLineNumber
+End
+
+
+Public Sub Menu_ImportG3_Click()
+If Last.Value Then 
+ ImportG3()
+Else
+ TextEditor1.Font = Font[Settings["View/Font", TextEditor1.Font.ToString()]]
+ TextEditor1.Styles[Highlight.Background].Color = Settings["View/BGCol", TextEditor1.Styles[Highlight.Background].Color]
+Endif
+Settings["View/UseG3Theme"] = Last.Value
+End
+
+
+Public Sub ImportG3()
+Dim gs As Settings, s, s2 As String, sa As String[], i, hi As Integer
+gs = New Settings(User.Home &/ ".config/gambas3/gambas3.conf")
+
+For Each s In HighlightStr
+hi = HighlightVal(s)
+s2 = gs["Highlight/" & s, ""]
+If s2 <> "" Then
+sa = IIf(InStr(s2, ","), Split(s2, ","), [s2])
+
+If sa.Count > 1 Then
+For i = 1 To sa.Max
+Select Lower(sa[i])
+  Case "bold"
+    TextEditor1.Styles[hi].Bold = True
+  Case "underline"
+    TextEditor1.Styles[hi].Underline = True
+  Case "dotted"
+    TextEditor1.Styles[hi].Dotted = True
+End Select
+Next
+Endif
+sa[0] = Replace(sa[0], "#", "&H")
+If sa[0] <> 0 Then TextEditor1.Styles[hi].Color = Val(sa[0])
+Endif
+Next
+Catch
+ Message(Error.Text & "\n" & Error.Where)
+End
+
+Public Sub HighlightVal(s As String) As Integer
+Return HighlightStr.Find(s)
+End
+
+
+Public Sub HSplit1_Resize()
+FuncGviewWidth = FuncGview.Width
+  Settings["View/FuncListWidth"] = FuncGview.Width
+End
+
+Public Sub TextEditor1_KeyPress()
+Select Key.Code
+  Case Key.Return, Key.Enter
+    ReadtoList()
+    Case Key.BackSpace, Key.Del
+      If TextEditor1.Count <> textLines Then ReadtoList()
+End Select
+End
+
+
+Public Sub Btn_Reload_Click()
+
+ TextEditor1.Load(LoadedFile)
+ TextBU = TextEditor1.Text
+ ReadtoList()
+
+End
+
+Public Sub TextEditor1_GotFocus()
+If LoadedFile <> "" And Exist(LoadedFile) Then
+  If TextBU <> File.Load(LoadedFile) Then
+    If Message.Warning("File on disk has changed!", "Reload", "Do not Reload") = 1 Then Btn_Reload_Click()
+  Endif
+Endif
+
+End
+
+Public Sub MenuShel_Click()
+Btn_Save_Click(True)
+If p Then p.Kill()
+
+With TermF.TView
+.Clear()
+ ' If Not p Then p = .Exec(["bash"])
+TermF.Show()
+Wait 0.5
+'.Input("cd " & Quote(File.Dir(LoadedFile)) & "\n")
+.Clear()
+TermF.Title = "Running: " & LoadedFile
+p = .Exec([LoadedFile], ["2>&1"])
+.SetFocus()
+End With
+While p.State = Process.Running
+  Wait
+Wend
+
+If p Then p.Kill()
+TermF.Close()
+End
+
+Public Sub MenuCut_Click()
+  TextEditor1.Cut()
+End
+Public Sub MenuCopy_Click()
+  TextEditor1.Copy()
+End
+Public Sub MenuPaste_Click()
+  TextEditor1.Paste()
+End
+
+Public Sub MenuCloseS_Click()
+
+  TextEditor1.CloseStrings = Last.Value
+  Settings["Edit/CloseStrings"] = Last.Value
+
+End
+Public Sub MenuCloseB_Click()
+
+  TextEditor1.CloseBraces = Last.Value
+  Settings["Edit/CloseBraces"] = Last.Value
+
+End
+
+Public Sub Btn_Search_Click()
+Dim old_ln As Integer
+
+If Me.SrchBox.Text = "" Then Return
+old_ln = TextEditor1.Line
+ Dim LN As Integer = TextEditor1.FindNextString(SrchBox.Text, TextEditor1.ToPos(TextEditor1.Line, TextEditor1.Column + 1))
+
+ If LN <> -1 Then 
+ Dim CN As Integer = InStr(TextEditor1[LN].Text, SrchBox.Text, IIf(old_ln <> LN, 0, TextEditor1.Column + 1)) - 1
+ TextEditor1.GotoCenter(CN, LN)
+ TextEditor1.Select(CN, LN, CN + SrchBox.Text.Len, LN)
+
+ Else
+   Balloon("Not found", Btn_Search)
+ Endif
+
+End
+
+Public Sub BtnExecCom_Click()
+
+  MenuShel_Click()
+
+End

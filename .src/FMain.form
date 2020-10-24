@@ -1,0 +1,192 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,100.4286,74)
+  Icon = Picture[".pencil.png"]
+  Persistent = True
+  Arrangement = Arrange.Vertical
+  { Menu1 Menu
+    Text = ("File")
+    { MenuOp Menu
+      Text = ("Open")
+      Picture = Picture["icon:/32/open"]
+      Shortcut = "Ctrl+O"
+    }
+    { Menu5 Menu
+      Text = ("Open as root")
+      { MenuOpARThis Menu
+        Text = ("Current File")
+      }
+      { MenuOpARReq Menu
+        Text = ("Choose File")
+      }
+    }
+    { Menu8 Menu
+    }
+    { MenuSave Menu
+      Text = ("Save")
+      Picture = Picture["icon:/32/save"]
+      Shortcut = "Ctrl+S"
+    }
+    { MenuSavAs Menu
+      Text = ("Save As")
+      Picture = Picture["icon:/32/save-as"]
+      Shortcut = "Ctrl+Shift+S"
+    }
+    { Menu11 Menu
+    }
+    { MenuQuit Menu
+      Text = ("Quit")
+      Picture = Picture["icon:/32/quit"]
+      Shortcut = "Ctrl+Q"
+    }
+  }
+  { MenuEd Menu
+    Text = ("Edit")
+    { MenuCut Menu
+      Text = ("Cut")
+      Picture = Picture["icon:/16/cut"]
+    }
+    { MenuCopy Menu
+      Text = ("Copy")
+      Picture = Picture["icon:/16/copy"]
+    }
+    { MenuPst Menu
+      Text = ("Paste")
+      Picture = Picture["icon:/16/paste"]
+    }
+    { Menu7 Menu
+    }
+    { Menu9 Menu
+      Text = ("Editing Options")
+      Picture = Picture["icon:/16/options"]
+      { MenuCloseS Menu
+        Text = ("Close Quotes")
+        Toggle = True
+      }
+      { MenuCloseB Menu
+        Text = ("Close Brackets")
+        Toggle = True
+      }
+    }
+  }
+  { Menu2 Menu
+    Text = ("View")
+    { MenuHL Menu
+      Text = ("Highlights")
+    }
+    { MenuPrBar Menu
+      Text = ("Show Prevfiew bar")
+      Toggle = True
+    }
+    { MenuShowLines Menu
+      Text = ("Show Line Numbers")
+      Toggle = True
+      Checked = True
+    }
+    { MenuWWrap Menu
+      Text = ("WordWrap")
+      Toggle = True
+    }
+    { Menu4 Menu
+      Text = ("Theme")
+      { MenuEdFnt Menu
+        Text = ("Editor Font")
+        Picture = Picture["icon:/16/font"]
+        Shortcut = "Ctrl+F"
+      }
+      { MenuEdBG Menu
+        Text = ("Background colour")
+      }
+      { Menu_ImportG3 Menu
+        Text = ("Use Gambas3 IDE Theme")
+        Toggle = True
+      }
+      { Menu10 Menu
+      }
+      { MenuListFont Menu
+        Text = ("Function List Font")
+        Picture = Picture["icon:/16/font"]
+        Shortcut = "Ctrl+Shift+F"
+      }
+    }
+  }
+  { MenuCompile Menu
+    Text = ("Compile / Run")
+    { MenuShel Menu
+      Text = ("Run in Terminal")
+      Shortcut = "Ctrl+R"
+    }
+    { Menu3 Menu
+    }
+    { Menu_gbs Menu
+      Text = ("gbs3 script runner")
+    }
+  }
+  { HBox1 HBox
+    MoveScaled(1,1,98,5)
+    { Btn_Open ToolButton
+      MoveScaled(0,1,5,3)
+      Picture = Picture["icon:/32/open"]
+    }
+    { Btn_Reload ToolButton
+      MoveScaled(5,0,6,5)
+      ToolTip = ("Reload")
+      Picture = Picture["icon:/32/refresh"]
+    }
+    { Btn_Save ToolButton
+      MoveScaled(10,0,6,5)
+      ToolTip = ("Save File")
+      Picture = Picture["icon:/32/save"]
+    }
+    { Btn_SaveAs ToolButton
+      MoveScaled(16,0,6,5)
+      ToolTip = ("Save As")
+      Picture = Picture["icon:/32/save-as"]
+    }
+    { Separator1 Separator
+      MoveScaled(22,1,1,3)
+    }
+    { BtnExecCom ToolButton
+      MoveScaled(23,0,6,5)
+      ToolTip = ("Save and Execute File")
+      Picture = Picture["icon:/32/terminal"]
+    }
+    { Spring1 Spring
+      MoveScaled(31,2,4,2)
+    }
+    { SrchBox TextBox
+      MoveScaled(40,0,20,5)
+      Alignment = Align.Right
+    }
+    { Btn_Search ToolButton
+      MoveScaled(60,0,5,5)
+      Picture = Picture["icon:/16/find"]
+    }
+    { ComboBox2 ComboBox
+      MoveScaled(65,0,33,5)
+      ReadOnly = True
+      List = [("Search style"), ("Shell   'Parenthes()' 1st word"), ("C style ') {'"), ("Basic / Gambas (Sub,Function)")]
+    }
+  }
+  { HSplit1 HSplit
+    MoveScaled(2,7,98,61)
+    Expand = True
+    { TextEditor1 TextEditor
+      MoveScaled(1,3,66,57)
+      #Translate = False
+      Background = &HA7C0C0&
+      PopupMenu = "MenuEd"
+      ShowPreview = True
+      ShowCurrent = True
+      ShowLineNumber = True
+      ShowBraces = True
+    }
+    { FuncGview GridView
+      MoveScaled(71,4,24,51)
+      Mode = Select.Single
+      Header = GridView.Horizontal
+      Sorted = True
+    }
+  }
+}
