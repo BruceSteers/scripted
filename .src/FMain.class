@@ -10,6 +10,7 @@ Public LastHL As String
 Public HighlightStr As String[] = ["Background", "Normal", "Keyword", "Function", "Operator", "Symbol", "Number", "String", "Comment", "Breakpoint", "Current", "Datatype", "Selection", "Highlight", "CurrentLine", "Error", "Help", "Preprocessor", "Escape", "Label", "Constant", "Custom"]
 Public textLines As Integer
 Public SearchStr As String = ""
+Public bFileIsGambas As Boolean = False
 
 Public Sub Form_Open()
 Dim i As Integer, a As Array
@@ -43,11 +44,6 @@ Endif
 a = Settings["Config/WinDims", [20, 20, Screen.Width / 2, Screen.Height / 2]]
 Me.Move(a[0], a[1], a[2], a[3])
 
-Object.Lock(ComboBox2)
-ComboBox2.Index = 1
-Object.UnLock(ComboBox2)
-
-
 MakeMenus(Me.MenuHL, "MNU_Mode_", HighList, True) 
 i = Settings["View/Highlight", 0]
 MenuHL.Children[i].Checked = True
@@ -73,20 +69,55 @@ Public Sub LoadHighlights()
     def = TextEditor1.Styles[dc].Color
     TextEditor1.Styles[dc].Color = Settings["Highlights/" & HighlightStr[c], def]
   Next
-  
 End
 
 
 Public Sub CheckFileType()
-  
-  If File.Ext(LoadedFile) = "vb" Then
-   Object.Lock(ComboBox2)
-   ComboBox2.Index = 1
-   Object.UnLock(ComboBox2)
-   Else
-  Endif
+  Dim sStr As String
 
- Me.Menu_gbs.Visible = (File.Ext(LoadedFile) = "gbs")
+bFileIsGambas = False
+sStr = File.Ext(LoadedFile)
+
+  Select sStr
+  Case "gbs", "vb", "class", "module"
+    Object.Lock(ComboBox2)
+    ComboBox2.Index = 3
+    bFileIsGambas = True
+    Object.UnLock(ComboBox2)
+    Balloon("Autodetected '" & IIf(sStr = "gbs", "gambas script", "basic") & "' filetype.", ComboBox2)
+    SetMenu("gambas")
+
+  Case Else
+  sStr = Left(TextBU, InStr(TextBU, gb.Lf) - 1)
+   If InStr(sStr, "#!/usr/bin/env") = 1 Then
+    Select sStr[InStr(sStr, " "), sStr.Len]
+     Case "bash", "sh"
+      Object.Lock(ComboBox2)
+      ComboBox2.Index = 1
+      Object.UnLock(ComboBox2)
+      Balloon("Autodetected 'sh/bash' filetype.", ComboBox2)
+      SetMenu("sh")
+     Case "gbs3"
+      Object.Lock(ComboBox2)
+      ComboBox2.Index = 3
+      bFileIsGambas = True
+      Object.UnLock(ComboBox2)
+      Balloon("Autodetected 'Gambas Script' filetype.", ComboBox2)
+      SetMenu("gambas")
+     Case Else
+      Balloon("Env filetype not handled.\n" & sStr, ComboBox2)
+    End Select
+    Else
+    Balloon("Cannot determine filetype from first line.\n" & sStr, ComboBox2)
+   Endif
+  End Select
+End
+
+Public Sub SetMenu(mode As String)
+For Each m As Menu In MenuHL.Children
+If m.Text <> "Set Colours" Then m.Value = (Lower(m.Text) = Lower(mode))
+TextEditor1.Highlight = IIf(mode = "None", "", Lower(mode))
+Next
   
 End
 
@@ -121,7 +152,8 @@ Dim c As Integer
 Select Split(Last.Name, "_")[1]
   Case "Mode"
 If Lower(Last.Text) = "gambas" Then
-  If Message.Warning("Setting Gambas highlight on normal text will reformat it.", "Cancel", "ok") = 1 Then
+ If Not bFileIsGambas Then
+  If Message.Warning("Setting Gambas highlight on normal (non-basic) text will reformat the text\non versions of gambas less than 3.15.90 (latest commit)", "Cancel", "ok") = 1 Then
     MenuHL.Children[1].Checked = False
     For c = 0 To MenuHL.Children.Count - 1 
      If MenuHL.Children[c].Text = LastHL Then
@@ -132,6 +164,7 @@ If Lower(Last.Text) = "gambas" Then
   Stop Event
   Return
   Endif
+ Endif
 Endif
 
 LastHL = Last.Text

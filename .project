@@ -2,7 +2,7 @@
 Title=ScriptED
 Startup=Start
 Icon=.pencil.png
-Version=0.0.47
+Version=0.0.50
 Component=gb.args
 Component=gb.image
 Component=gb.gui
@@ -16,8 +16,8 @@ Component=gb.settings
 Component=gb.term
 Component=gb.form.terminal
 Component=gb.mime
-ArgumentList=[["/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"],["/etc/fstab"],["/run/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"]]
-CurrentArgumentList=["/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"]
+ArgumentList=[["/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"],["/etc/fstab"],["/run/media/bonus/Elements/LinuxStuff/Modules/Gambas3-Compile-and-Install/V3.0/gambas3-update-compile-and-install"],["/media/bonus/Elements/LinuxStuff/Modules/GRoot_class/GRoot.gbs"]]
+CurrentArgumentList=["/media/bonus/Elements/LinuxStuff/Modules/GRoot_class/GRoot.gbs"]
 Environment="GB_PCODE_VERSION=3.8"
 TabSize=2
 Language=en_GB

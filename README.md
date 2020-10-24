@@ -1,4 +1,4 @@
-# scripted
+# ScriptED
 Simple Linux shell script editor
 
 Work in progress...
@@ -7,7 +7,7 @@ I have made this to help me with making shell scripts.\
 Written in Gambas Basic http://gambas.sourceforge.net/
 gambas3 needs to be installed.
 
-But it functional now so uploading it here for anyone else to examine/use/upgrade/whatever.
+But it is functional now so uploading it here for anyone else to examine/use/upgrade/whatever.
 
 Main Features..
 

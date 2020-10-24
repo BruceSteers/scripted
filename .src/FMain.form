@@ -117,11 +117,6 @@
       Text = ("Run in Terminal")
       Shortcut = "Ctrl+R"
     }
-    { Menu3 Menu
-    }
-    { Menu_gbs Menu
-      Text = ("gbs3 script runner")
-    }
   }
   { HBox1 HBox
     MoveScaled(1,1,98,5)
