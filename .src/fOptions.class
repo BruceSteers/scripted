@@ -1,0 +1,26 @@
+' Gambas class file
+
+
+Public Sub cbQuiet_Click()
+
+  Settings["Config/Quiet"] = Last.Value
+
+End
+
+Public Sub cbFixScroll_Click()
+
+  Settings["Config/ScrollFix"] = Last.Value
+
+End
+
+Public Sub cbSaveConfirm_Click()
+
+  Settings["Config/ConfirmSave"] = Last.Value
+
+End
+
+Public Sub cbCloseTerm_Click()
+
+  Settings["Config/CloseTerm"] = Last.Value
+
+End

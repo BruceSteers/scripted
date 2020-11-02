@@ -1,0 +1,150 @@
+' Gambas class file
+
+Export
+
+Public Const _Properties As String = "Data,State,FKeys,Editor"
+
+Property Data As Variant[]
+Property FKeys As Key[]
+Property Editor As TextEditor
+Property State As Integer
+
+Private $vData As Variant[]
+Private $bFKeys As Key[]
+Private $iState As Integer
+Private $tEditor As TextEditor
+
+Public Enum Empty, Idle, Recording, Playing
+Private Enum eAlt, eShift, eCtrl
+
+Private bAlt As Boolean
+Private bShift As Boolean
+Private bCtrl As Boolean
+
+
+Public Sub TextEditorM_KeyRelease()
+  
+  If $iState <> Recording Then Return
+
+ 
+  If Key.Text Then Debug Key.Text; ";"; bAlt; ";"; bShift; ";"; bCtrl
+  
+End
+
+Public Sub TextEditorM_KeyPress()
+
+  If $iState <> Recording Then Return
+  bAlt = Key.Alt
+  bShift = Key.Shift
+  bCtrl = Key.Control
+
+  
+End
+
+Public Sub Play() As Boolean
+  
+  If $vData.Count = 0 Then 
+    Message("Macro Recording Empty")
+    Return 1
+  Else If $iState = Recording Then
+    Message("Macro Currently Recording!")
+    Return 1
+  Endif
+
+Dim iCount As Integer
+For iCount = 0 To $vData.Max
+  Key
+Next
+  Return 0
+End
+
+
+Public Sub _new(Attatched_TextEditor As TextEditor)
+  
+  $iState = Empty
+  $vData = []
+  $bFKeys = []
+  $tEditor = Attatched_TextEditor
+  Object.Attach($tEditor, Me, "TextEditorM")
+
+End
+
+Public Sub Clear()
+  
+  $vData.Clear()
+  $bFKeys.Clear()
+  $vData = []
+  $bFKeys = []
+  $iState = Empty
+
+End
+
+
+Public Sub Kill()
+  
+  Object.Detach($tEditor)
+  Clear()
+  
+End
+
+
+Public Sub Stop()
+  
+  $iState = Idle
+  
+End
+
+Public Sub Record()
+  
+  $iState = Recording
+  
+End
+
+
+Private Function Data_Read() As Variant[]
+
+  Return $vData
+
+End
+
+Private Sub Data_Write(Value As Variant[])
+
+  $vData = Value
+
+End
+
+Private Function State_Read() As Integer
+
+  Return $iState
+
+End
+
+Private Sub State_Write(Value As Integer)
+
+  $iState = Value
+
+End
+
+Private Function FKeys_Read() As Key[]
+
+  Return $bFKeys
+
+End
+
+Private Sub FKeys_Write(Value As Key[])
+
+  $bFKeys = Value
+
+End
+
+Private Function Editor_Read() As TextEditor
+
+  Return $tEditor
+
+End
+
+Private Sub Editor_Write(Value As TextEditor)
+
+  $tEditor = Value
+
+End

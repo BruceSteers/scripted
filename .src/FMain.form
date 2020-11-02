@@ -1,8 +1,9 @@
 # Gambas Form File 3.0
 
 { Form Form
-  MoveScaled(0,0,100.4286,74)
-  Icon = Picture[".pencil.png"]
+  MoveScaled(0,0,105,71)
+  Text = ("+")
+  Icon = Picture["scripted.png"]
   Persistent = True
   Arrangement = Arrange.Vertical
   { Menu1 Menu
@@ -11,6 +12,14 @@
       Text = ("Open")
       Picture = Picture["icon:/32/open"]
       Shortcut = "Ctrl+O"
+    }
+    { MenuOpenInTab Menu
+      Text = ("Open (New Tab)")
+      Picture = Picture["icon:/32/open"]
+      Shortcut = "Ctrl+O"
+    }
+    { MenuRecent Menu
+      Text = ("Recently opened")
     }
     { Menu5 Menu
       Text = ("Open as root")
@@ -51,7 +60,7 @@
       Text = ("Copy")
       Picture = Picture["icon:/16/copy"]
     }
-    { MenuPst Menu
+    { MenuPaste Menu
       Text = ("Paste")
       Picture = Picture["icon:/16/paste"]
     }
@@ -68,6 +77,13 @@
         Text = ("Close Brackets")
         Toggle = True
       }
+      { MenuModes Menu
+        Text = ("Modes")
+        Picture = Picture["icon:/24/edit"]
+      }
+    }
+    { MenuPrefs Menu
+      Text = ("Prefrences")
     }
   }
   { Menu2 Menu
@@ -82,7 +98,6 @@
     { MenuShowLines Menu
       Text = ("Show Line Numbers")
       Toggle = True
-      Checked = True
     }
     { MenuWWrap Menu
       Text = ("WordWrap")
@@ -96,7 +111,7 @@
         Shortcut = "Ctrl+F"
       }
       { MenuEdBG Menu
-        Text = ("Background colour")
+        Text = ("Background/Text colour")
       }
       { Menu_ImportG3 Menu
         Text = ("Use Gambas3 IDE Theme")
@@ -111,11 +126,83 @@
       }
     }
   }
-  { MenuCompile Menu
-    Text = ("Compile / Run")
+  { MenuTools Menu
+    Text = ("Tools")
     { MenuShel Menu
       Text = ("Run in Terminal")
       Shortcut = "Ctrl+R"
+    }
+    { MenuMacro Menu
+      Text = ("Macro Recorder (Empty)")
+      Picture = Picture["icon:/16/record"]
+      { MenuMacroStart Menu
+        Text = ("Start Recording")
+        Picture = Picture["icon:/16/record"]
+      }
+      { MenuMacroStop Menu
+        Text = ("Stop Recording")
+        Picture = Picture["icon:/16/stop"]
+      }
+      { MenuMacroPlay Menu
+        Text = ("Play Recording")
+        Picture = Picture["icon:/16/play"]
+      }
+      { MenuMacroClear Menu
+        Text = ("Clear Macro")
+      }
+    }
+    { MenuTemplate Menu
+      Text = ("New file of type..")
+      Picture = Picture["icon:/16/new"]
+      { Menu3 Menu NewType
+        Name = "Menu3"
+        Text = ("bash script")
+        Picture = Picture["icon:/16/script"]
+        Tag = "bash"
+      }
+      { Menu13 Menu
+        Text = ("More bash ->")
+        Picture = Picture["icon:/16/script"]
+        { Menu12 Menu NewType
+          Name = "Menu12"
+          Text = ("bash with Ctrl-C-handler")
+          Picture = Picture["icon:/16/script"]
+          Tag = "bash-c"
+        }
+        { Menu14 Menu NewType
+          Name = "Menu14"
+          Text = ("bash with minimal functions")
+          Picture = Picture["icon:/16/script"]
+          Tag = "bash-f"
+        }
+      }
+      { Menu6 Menu NewType
+        Name = "Menu6"
+        Text = ("gambas script")
+        Picture = Picture["icon:/16/gambas"]
+        Tag = "gambas"
+      }
+      { Menu15 Menu
+        Text = ("More gambas ->")
+        Picture = Picture["icon:/16/gambas"]
+        { Menu16 Menu NewType
+          Name = "Menu16"
+          Text = ("gambas with GUI")
+          Tag = "gambas-gui"
+        }
+      }
+    }
+  }
+  { MenuTab Menu
+    Text = ("Menu3")
+    Visible = False
+    { MenuNewTab Menu
+      Text = ("New Tab")
+      Picture = Picture["icon:/small/add"]
+    }
+    { Mnu_CloseTab Menu
+      Text = ("Close Opened Tab")
+      Picture = Picture["icon:/16/close"]
     }
   }
   { HBox1 HBox
@@ -147,44 +234,77 @@
       ToolTip = ("Save and Execute File")
       Picture = Picture["icon:/32/terminal"]
     }
+    { Separator2 Separator
+      MoveScaled(30,1,1,4)
+    }
+    { btnAddTab ToolButton
+      MoveScaled(31,0,4,5)
+      AutoResize = True
+      Picture = Picture["icon:/16/add"]
+    }
     { Spring1 Spring
-      MoveScaled(31,2,4,2)
+      MoveScaled(38,1,4,2)
     }
     { SrchBox TextBox
-      MoveScaled(40,0,20,5)
+      MoveScaled(43,0,13,5)
       Tag = "0"
       Alignment = Align.Right
     }
     { Btn_Search ToolButton
-      MoveScaled(60,0,5,5)
+      MoveScaled(56,0,5,5)
       Picture = Picture["icon:/16/find"]
     }
-    { ComboBox2 ComboBox
-      MoveScaled(65,0,33,5)
+    { Btn_Search2 ToolButton
+      MoveScaled(61,0,5,5)
+      Picture = Picture["icon:/16/replace"]
+    }
+    { cbSearch ComboBox
+      MoveScaled(66,0,32,5)
       ReadOnly = True
       List = [("Search style"), ("Shell   'Parenthes()' 1st word"), ("C style ') {'"), ("Basic / Gambas (Sub,Function)")]
     }
   }
   { HSplit1 HSplit
-    MoveScaled(2,7,98,61)
+    MoveScaled(0,8,103,58)
     Expand = True
-    { TextEditor1 TextEditor
-      MoveScaled(1,1,68,59)
-      #Translate = False
-      Background = &HA7C0C0&
-      PopupMenu = "MenuEd"
-      ShowPreview = True
-      ShowPosition = True
-      ShowLimit = True
-      ShowCurrent = True
-      ShowLineNumber = True
-      ShowBraces = True
+    { Tabs TabPanel
+      MoveScaled(0,0,74,56)
+      Expand = True
+      Arrangement = Arrange.Fill
+      Padding = 5
+      Closable = True
+      CloseButton = True
+      Index = 0
+      Text = ("New File")
+      { TextEditor1 TextEditor
+        MoveScaled(3,2,65,48)
+        #Translate = False
+        Background = &HA7C0C0&
+        PopupMenu = "MenuEd"
+        ShowPreview = True
+        TabIndent = True
+        ShowPosition = True
+        ShowLimit = True
+        ShowCurrent = True
+        ShowModified = True
+        ShowBraces = True
+      }
+      Index = 0
     }
-    { FuncGview GridView
-      MoveScaled(71,4,24,51)
-      Mode = Select.Single
-      Header = GridView.Horizontal
-      Sorted = True
+    { Panel1 Panel
+      MoveScaled(75,1,27,55)
+      Arrangement = Arrange.Vertical
+      { FuncGview GridView
+        MoveScaled(1,1,24,49)
+        Expand = True
+        Mode = Select.Single
+        Header = GridView.Horizontal
+        Sorted = True
+      }
+      { Button1 Button
+        MoveScaled(2,50,23,4)
+        Text = ("Refresh List")
+      }
     }
   }
 }

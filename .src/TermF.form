@@ -3,29 +3,24 @@
 { Form Form
   MoveScaled(0,0,109,42)
   Text = ("JumpEd Terminal")
-  Icon = Picture["icon:/32/terminal"]
-  Stacking = Window.Above
+  Icon = Picture["scripted.png"]
   Arrangement = Arrange.Vertical
   { HBox1 HBox
     MoveScaled(0,0,109,4)
     Spacing = True
-    { ToolButton3 ToolButton
+    { Btn_SaveText ToolButton
       MoveScaled(1,0,4,4)
       Picture = Picture["icon:/24/save-as"]
     }
     { Separator1 Separator
       MoveScaled(5,0,2,3)
     }
-    { ToolButton4 ToolButton
+    { Btn_ClipCopy ToolButton
       MoveScaled(15,0,4,4)
       Picture = Picture["icon:/24/copy"]
     }
-    { ToolButton2 ToolButton
-      MoveScaled(24,0,4,4)
-      Picture = Picture["icon:/24/copy"]
-    }
-    { ToolButton5 ToolButton
-      MoveScaled(32,0,4,4)
+    { Btn_Clear ToolButton
+      MoveScaled(23,0,4,4)
       Picture = Picture["icon:/24/clear"]
     }
     { Spring1 Spring

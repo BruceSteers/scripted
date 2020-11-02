@@ -1,0 +1,23 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,58,32)
+  Icon = Picture["scripted.png"]
+  Persistent = True
+  { cbQuiet CheckBox
+    MoveScaled(8,2,35,4)
+    Text = ("Suppress Balloon messages")
+  }
+  { cbFixScroll CheckBox
+    MoveScaled(8,7,41,4)
+    Text = ("Scroll Fix, Stop missaligned text on load.")
+  }
+  { cbSaveConfirm CheckBox
+    MoveScaled(8,12,41,4)
+    Text = ("Confirm before saving files")
+  }
+  { cbCloseTerm CheckBox
+    MoveScaled(8,17,41,4)
+    Text = ("Close Terminal when command exits")
+  }
+}

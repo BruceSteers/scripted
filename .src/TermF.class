@@ -23,3 +23,48 @@ Public Sub ToolButton1_Click()
   Me.Close()
 
 End
+
+Public Sub Btn_SaveText_Click()
+
+ Dialog.Title = "Save text to file.."
+ If Dialog.SaveFile() Then Return
+ File.Save(Dialog.Path, TView.Text)
+
+Catch
+ Message(Error.Text & "\n" & Error.Where)
+End
+
+Public Sub Btn_ClipCopy_Click()
+Dim s As String = TView.Text
+ Clipboard.Copy(s, "text/plain")
+  Balloon.Info("Text Copied to local buffer.\nPaste it before closing this app.", Last)
+End
+
+Public Sub Btn_Clear_Click()
+
+  TView.Clear()
+
+End
+Public Sub Form_KeyPress()
+  Dim bRecieved As Boolean = True
+
+  If Key.Control Then
+
+    If key.code = Key["v"] Then 
+      TView.Paste()
+
+    Else If key.code = Key["c"] Then 
+      TView.Copy()
+
+    Else If key.code = Key["x"] Then 
+      TView.Copy()
+
+    Else If key.code = Key["a"] Then 
+      'TView.SelectAll()
+      Else
+        bRecieved = False
+    Endif
+  If bRecieved Then Stop Event
+  Endif
+End
+

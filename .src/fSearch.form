@@ -1,0 +1,77 @@
+# Gambas Form File 3.0
+
+{ Form Form
+  MoveScaled(0,0,63,28)
+  Icon = Picture["scripted.png"]
+  Resizable = False
+  Arrangement = Arrange.Vertical
+  Spacing = True
+  Margin = True
+  { HBox3 HBox
+    MoveScaled(0,1,63,5)
+    { Label1 Label
+      MoveScaled(0,1,13,4)
+      Text = ("Search for")
+      Alignment = Align.Right
+    }
+    { tbSearch TextBox
+      MoveScaled(14,0,47,5)
+    }
+  }
+  { HBox2 HBox
+    MoveScaled(0,7,63,5)
+    { Label2 Label
+      MoveScaled(0,1,13,4)
+      Text = ("Replace with")
+      Alignment = Align.Right
+    }
+    { tbReplace TextBox
+      MoveScaled(14,0,47,5)
+    }
+  }
+  { HBox4 HBox
+    MoveScaled(2,13,60,4)
+    { cbCase CheckBox
+      MoveScaled(3,0,26,4)
+      Text = ("Match Case")
+    }
+    { cbWord CheckBox
+      MoveScaled(32,0,26,4)
+      Enabled = False
+      Text = ("Whole Word Only")
+    }
+  }
+  { HBox5 HBox
+    MoveScaled(2,18,58,4)
+    { cbReverse CheckBox
+      MoveScaled(2,0,26,4)
+      Enabled = False
+      Text = ("Search Backwards")
+    }
+  }
+  { HBox1 HBox
+    MoveScaled(0,23,62,4)
+    Spacing = True
+    { Panel1 Panel
+      MoveScaled(4,0,4,4)
+      Expand = True
+    }
+    { btnFind Button
+      MoveScaled(9,0,8,4)
+      Text = ("Find")
+    }
+    { btnReplace Button
+      MoveScaled(18,0,11,4)
+      Text = ("Replace")
+    }
+    { btnReplaceAll Button
+      MoveScaled(30,0,14,4)
+      Text = ("Replace All")
+    }
+    { btnCancel Button
+      MoveScaled(46,0,16,4)
+      Text = ("Cancel")
+      Cancel = True
+    }
+  }
+}

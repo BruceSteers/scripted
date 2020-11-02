@@ -1,19 +1,43 @@
 ' Gambas class file
 
 Public LoadOnStart As String = ""
-Public LoadedFile As String
-Public TextBU As String
 Public p As Process
 Public FuncGviewWidth As Integer
-Public HighList As String[] = ["None", "Gambas", "JavaScript", "HTML", "CSS", "C", "C++", "SQL", "diff", "SH", "Custom"]
+Public HighList As String[] = ["None", "Gambas", "JavaScript", "HTML", "CSS", "C", "C++", "SQL", "Diff", "Sh", "Custom"]
 Public LastHL As String
 Public HighlightStr As String[] = ["Background", "Normal", "Keyword", "Function", "Operator", "Symbol", "Number", "String", "Comment", "Breakpoint", "Current", "Datatype", "Selection", "Highlight", "CurrentLine", "Error", "Help", "Preprocessor", "Escape", "Label", "Constant", "Custom"]
 Public textLines As Integer
 Public SearchStr As String = ""
-Public bFileIsGambas As Boolean = False
+Public bQuiet As Boolean = False
+Public sString As String
+Public aString As String[][] = []
+Public $tEditor As TextEditor
+Public hold As Boolean = False
+Public mMacro As MacroRecorder
+Public sHigh_SH_Compat As String = "sh"
+
+Public Enum sPath, sModified, bChanged, vType, sFunctions
+Public eTag As Array = ["", "", False, ["", 0, False, "unknown filetype"], [["", ""]]]
+
+
+Public Sub Test_sh()
+Dim oH As String = TextEditor1.Highlight
+TextEditor1.Highlight = "sh"
+TextEditor1.Highlight = oH
+Return 
+
+Catch 
+sHigh_SH_Compat = "c"
+HighList[9] = "(upgrade for sh)"
+End
+
+
 
 Public Sub Form_Open()
-Dim i As Integer, a As Array
+Dim a As Array
+
+Test_sh()
+
 
 SrchBox.Tag = 0
 FuncGview.Font = Font[Settings["List/Font", FuncGview.Font.ToString()]]
@@ -23,123 +47,260 @@ FuncGview.Columns[0].width = FuncGview.Font.TextWidth("000") + 5
 FuncGview.Columns[1].Text = "Line"
 FuncGview.Columns.Sort = 1
 FuncGviewWidth = Settings["View/FuncListWidth", 200]
-Me.Menu_ImportG3.Value = Settings["View/UseG3Theme", False]
-TextEditor1.ShowPreview = Settings["View/ShowPreview", True]
-Me.MenuPrBar.Value = TextEditor1.ShowPreview
-TextEditor1.Wrap = Settings["View/WordWrap", False] 
-TextEditor1.CloseBraces = Settings["Edit/CloseBraces", False]
-Me.MenuCloseB.Value = TextEditor1.CloseBraces
-TextEditor1.CloseStrings = Settings["Edit/CloseStrings", False]
-Me.MenuCloseS.Value = TextEditor1.CloseStrings
-Balloon.Delay = 2000
-System.Shell = "bash"
-If Menu_ImportG3.Value Then 
- ImportG3()
-Else
- LoadHighlights()
-Endif
+Tabs.PopupMenu = "MenuTab"
+$tEditor = ActiveEditor()
+SetEdStyle()
 
- TextEditor1.Font = Font[Settings["View/Font", TextEditor1.Font.ToString()]]
+'Balloon.Delay = 2000
+fOptions.cbQuiet.Value = Settings["Config/Quiet", False]
+fOptions.cbSaveConfirm.Value = Settings["Config/ConfirmSave", True]
+fOptions.cbCloseTerm.Value = Settings["Config/CloseTerm", True]
+
+MakeMenus(Me.MenuHL, "MNU_High_", HighList, True, True) 
+MakeMenus(Me.MenuModes, "MNU_Mode_", HighList, True)
+
 
 a = Settings["Config/WinDims", [20, 20, Screen.Width / 2, Screen.Height / 2]]
 Me.Move(a[0], a[1], a[2], a[3])
 
-MakeMenus(Me.MenuHL, "MNU_Mode_", HighList, True) 
-i = Settings["View/Highlight", 0]
-MenuHL.Children[i].Checked = True
-TextEditor1.Highlight = IIf(i = 0, "", HighList[i])
+SetMDMenu("none")
+SetHLMenu("none")
 
-If LoadOnStart <> "" Then 
- Object.Lock(TextEditor1)
- TextEditor1.Load(LoadOnStart)
- Object.UnLock(TextEditor1)
- LoadedFile = LoadOnStart
- TextBU = TextEditor1.Text
- CheckFileType()
- ReadtoList()
- TextEditor1.Refresh()
-Endif
+ If LoadOnStart <> "" Then 
+  LoadFile(LoadOnStart)
+ Else
+  $tEditor.Tag = eTag
+ Endif
 
-TextEditor1.ShowLineNumber = Settings["View/ShowLines", False] 
-Me.MenuShowLines.Value = TextEditor1.ShowLineNumber
+Recents2Menu()
+
+ fOptions.cbFixScroll.Value = Settings["Config/ScrollFix", False]
+ If fOptions.cbFixScroll.Value Then $tEditor.Scroll(0, 0)
+
+'mMacro = New MacroRecorder($tEditor)
+'mMacro.Record()
+
+ Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+End
+
+Public Sub SetEdStyle()
+  
+Me.Menu_ImportG3.Value = Settings["View_" & $tEditor.Highlight & "/UseG3Theme", False]
+$tEditor.ShowPreview = Settings["View_" & $tEditor.Highlight & "/ShowPreview", True]
+Me.MenuPrBar.Value = $tEditor.ShowPreview
+$tEditor.Wrap = Settings["View_" & $tEditor.Highlight & "/WordWrap", False] 
+$tEditor.CloseBraces = Settings["Edit_" & $tEditor.Highlight & "/CloseBraces", False]
+Me.MenuCloseB.Value = $tEditor.CloseBraces
+$tEditor.CloseStrings = Settings["Edit_" & $tEditor.Highlight & "/CloseStrings", False]
+Me.MenuCloseS.Value = $tEditor.CloseStrings
+
+$tEditor.Font = Font[Settings["View_" & $tEditor.Highlight & "/Font", $tEditor.Font.ToString()]]
+
+Me.MenuShowLines.Value = Settings["View_" & $tEditor.Highlight & "/ShowLines", True]
+$tEditor.ShowLineNumber = Me.MenuShowLines.Value
+
+Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
 
 End
+
 
 Public Sub LoadHighlights()
-  Dim c, dc, def As Integer
+  Dim c, dc As Integer, def As String, sVar As String[]
+
   For c = 0 To HighlightStr.Max
     dc = IIf(HighlightStr[c] = "Custom", Highlight.Custom, c)
-    def = TextEditor1.Styles[dc].Color
-    TextEditor1.Styles[dc].Color = Settings["Highlights/" & HighlightStr[c], def]
-  Next
-End
-
-
-Public Sub CheckFileType()
-  Dim sStr As String
-
-bFileIsGambas = False
-sStr = File.Ext(LoadedFile)
-
-  Select sStr
-  Case "gbs", "vb", "class", "module"
-    Object.Lock(ComboBox2)
-    ComboBox2.Index = 3
-    bFileIsGambas = True
-    Object.UnLock(ComboBox2)
-    Balloon("Autodetected '" & IIf(sStr = "gbs", "gambas script", "basic") & "' filetype.", ComboBox2)
-    SetMenu("gambas")
-
-  Case Else
-  sStr = Left(TextBU, InStr(TextBU, gb.Lf) - 1)
-   If InStr(sStr, "#!/usr/bin/env") = 1 Then
-    Select sStr[InStr(sStr, " "), sStr.Len]
-     Case "bash", "sh"
-      Object.Lock(ComboBox2)
-      ComboBox2.Index = 1
-      Object.UnLock(ComboBox2)
-      Balloon("Autodetected 'sh/bash' filetype.", ComboBox2)
-      SetMenu("sh")
-     Case "gbs3"
-      Object.Lock(ComboBox2)
-      ComboBox2.Index = 3
-      bFileIsGambas = True
-      Object.UnLock(ComboBox2)
-      Balloon("Autodetected 'Gambas Script' filetype.", ComboBox2)
-      SetMenu("gambas")
-     Case Else
-      Balloon("Env filetype not handled.\n" & sStr, ComboBox2)
-    End Select
+    If c <> 0 Then
+    def = $tEditor.Styles[dc].Color & "," & $tEditor.Styles[dc].Bold & "," & $tEditor.Styles[dc].Underline
+    sVar = Split(Settings["Highlights-" & Lower($tEditor.Highlight) & "/" & HighlightStr[c], def], ",")
+    $tEditor.Styles[dc].Bold = Val(sVar[1])
+    $tEditor.Styles[dc].Underline = Val(sVar[2])
     Else
-    Balloon("Cannot determine filetype from first line.\n" & sStr, ComboBox2)
-   Endif
-  End Select
+    sVar = [Settings["Highlights-" & Lower($tEditor.Highlight) & "/" & HighlightStr[c], $tEditor.Styles[dc].Color]]
+    Endif
+    $tEditor.Styles[dc].Color = Val(sVar[0])
+  Next
+SetEdStyle()
+ Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+
 End
 
-Public Sub SetMenu(mode As String)
-For Each m As Menu In MenuHL.Children
-If m.Text <> "Set Colours" Then m.Value = (Lower(m.Text) = Lower(mode))
-TextEditor1.Highlight = IIf(mode = "None", "", Lower(mode))
-Next
+Public Sub Ballon(msg As String, obj As Control)
+  If fOptions.cbQuiet.Value Or If bQuiet Then Return
+  Balloon(msg, obj)
   
 End
 
 
-Public Sub MakeMenus(ByRef ParentMenu As Menu, prefix As String, items As String[], Optional radioType As Boolean = False)
+Private Sub SetFileType(typ As String, iMode As Integer, bCanRun As Boolean, sName As String)
+
+  $tEditor.Tag[vType] = [typ, iMode, bCanRun, sName]
+  Object.Lock(cbSearch)
+  cbSearch.Index = iMode
+  $tEditor.Tag[vType][1] = iMode
+  Object.UnLock(cbSearch)
+  RunAble(bCanRun)
+  SetHLMenu(typ)
+  SetMDMenu(typ)
+  Ballon("detected '" & sName & "' filetype.", cbSearch)
+
+End
+
+
+Public Sub CheckFileType(Optional bNoFile As Boolean = False) As Boolean
+
+$tEditor = ActiveEditor()
+
+SetMDMenu("none")
+SetHLMenu("none")
+
+If Not bNoFile And If $tEditor.Tag[sPath] = "-" Then 
+  LoadHighlights()
+  Return
+Endif
+
+If $tEditor.Tag[vType][0] <> "" Then
+  SetFileType($tEditor.Tag[vType][0], $tEditor.Tag[vType][1], $tEditor.Tag[vType][2], $tEditor.Tag[vType][3])
+  LoadHighlights()
+  Return
+Endif
+
+Dim sExt As String = File.Ext($tEditor.Tag[sPath])
+
+ If Not bNoFile Then
+  Dim sMimeType As String
+  Shell "xdg-mime query filetype '" & $tEditor.Tag[sPath] & "'" Wait To sMimeType
+  Dim aMime As String[] = Split(RTrim(sMimeType), "/")
+
+  If aMime[0] = "application" Then 
+    If aMime[1] = "x-gambasscript" Then
+      SetFileType("gambas", 3, True, "Gambas Shell Script")
+     Goto FoundType
+    Else If aMime[1] = "x-java" Then
+      SetFileType("gambas", 3, False, "Gambas class file")
+     Goto FoundType
+    Else If aMime[1] = "x-shellscript" Then 
+     SetFileType(sHigh_SH_Compat, 1, True, "Shell Script")
+     Goto FoundType
+    Endif
+
+  Else If aMime[0] <> "text" Then 
+    Debug Trim(sMimeType)
+    Message.Warning("File does not appear to be a text file!\n" & $tEditor.Tag[sPath])
+    Return True
+   Endif
+ Endif
+
+'bQuiet = True
+
+  Select sExt
+  Case "gbs"
+    SetFileType("gambas", 3, True, "Gambas basic Script")
+  Case "module"
+    SetFileType("gambas", 3, False, "Gambas basic module")
+  Case "class"
+    SetFileType("gambas", 3, False, "Gambas basic class")
+  Case "vb"
+    SetFileType("gambas", 3, False, "Visual basic")
+  Case Else
+  Dim sStr As String = Left($tEditor.Text, InStr($tEditor.Text, gb.Lf) - 1)
+   If InStr(sStr, "#!/usr/bin/env") = 1 Then
+    Select sStr[InStr(sStr, " "), sStr.Len]
+     Case sHigh_SH_Compat
+      SetFileType(sHigh_SH_Compat, 1, True, "sh shell script")
+     Case "bash"
+      SetFileType(sHigh_SH_Compat, 1, True, "bash shell script")
+     Case "gbs3"
+      SetFileType("gambas", 3, True, "Gambas Script")
+     Case Else
+      Ballon("Env filetype not handled.\n" & sStr, cbSearch)
+      RunAble(False)
+    End Select
+   Else If (InStr(sStr, "/bash") > 0) Then
+    SetFileType(sHigh_SH_Compat, 1, True, "bash shell script")
+   Else If (InStr(sStr, "/sh") > 0) Then
+      SetFileType(sHigh_SH_Compat, 1, True, "bash shell script")
+   Else
+     RunAble(False)
+     Ballon("Cannot determine filetype from first line.\n" & sStr, cbSearch)
+   Endif
+  End Select
+
+FoundType:
+
+Me.Title = "[" & User.Name & "]" & $tEditor.Tag[sPath]
+AddRecent()
+
+LoadHighlights()
+bQuiet = False
+
+Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+
+End
+
+Public Sub RunAble(bBool As Boolean)
+  
+  Me.BtnExecCom.Visible = bBool
+
+End
+
+
+Public Sub SetHLMenu(imode As String)
+For Each m As Menu In MenuHL.Children
+If m.Text <> "Set Colours" Then m.Value = (Lower(m.Text) = Lower(imode))
+Next
+$tEditor.Highlight = IIf(imode = "None", "", Lower(imode))
+  LastHL = imode
+Catch
+  SetHLMenu("C")
+  LastHL = "C"
+If Not Settings["Config/UpgradeGetSHHide", False] Then
+If Message.Warning("To enable Highliting and typing modes for sh (shell)\nYou need to get the lastes Gambas3", 
+   "Don't remind me", "Okay") = 1 Then Settings["Config/UpgradeGetSHHide"] = True
+Endif
+
+End
+
+Public Sub SetMDMenu(imode As String)
+For Each m As Menu In MenuModes.Children
+m.Value = (Lower(m.Text) = Lower(imode))
+Next
+Dim s As String = $tEditor.Highlight
+$tEditor.Mode = IIf(Lower(imode) = "None", "", Lower(imode))
+$tEditor.Highlight = s
+
+Catch
+SetMDMenu("C")
+Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+
+End
+
+
+Public Sub MakeMenus(ByRef ParentMenu As Menu, prefix As String, items As String[], Optional radioType As Boolean = False, Optional Highs As Boolean = False)
 Dim s As String, NewMen As Menu, i As Integer = 0
+
 For Each s In items
-With NewMen = New Menu(ParentMenu) As "CustomMenu"
- .Name = prefix & s
- .Caption = s
- .Tag = i
-If radioType Then .Radio = True
-End With
+If Highs Then
+ NewMen = New Menu(ParentMenu) As "HighMenu"
+Else
+ NewMen = New Menu(ParentMenu) As "ModeMenu"
+Endif
+NewMen.Name = prefix & s
+NewMen.Caption = s
+NewMen.Tag = i
+If radioType Then NewMen.Radio = True
+
 i += 1
 Next
-With NewMen = New Menu(ParentMenu) As "SetCol"
- .Caption = "Set Colours"
-End With
 
+If Highs Then
+ With NewMen = New Menu(ParentMenu) As "SetCol"
+ .Caption = "Set Colours"
+ End With
+Endif
 End
 
 Public Sub SetCol_Click()
@@ -148,14 +309,24 @@ Public Sub SetCol_Click()
   
 End
 
+Public Sub ModeMenu_Click()
+Dim s As String = $tEditor.Highlight
+Object.Lock($tEditor)
+$tEditor.Mode = IIf(Last.text = "None", "", Lower(Last.text))
+Object.UnLock($tEditor)
+$tEditor.Highlight = s
+End
 
-Public Sub CustomMenu_Click()
+
+Public Sub HighMenu_Click()
 Dim c As Integer
-
-Select Split(Last.Name, "_")[1]
-  Case "Mode"
+If Left(Last.Text) = "(" Then
+  Message("Latest beta gambas 3.15.90 supports shell highlighting\nUpgrade Gambas to use it.")
+  
+  Return
+Endif
 If Lower(Last.Text) = "gambas" Then
- If Not bFileIsGambas Then
+ If sHigh_SH_Compat <> "sh" And If $tEditor.Tag[vType][0] <> "gambas" Then
   If Message.Warning("Setting Gambas highlight on normal (non-basic) text will reformat the text\non versions of gambas less than 3.15.90 (latest commit)", "Cancel", "ok") = 1 Then
     MenuHL.Children[1].Checked = False
     For c = 0 To MenuHL.Children.Count - 1 
@@ -171,121 +342,269 @@ If Lower(Last.Text) = "gambas" Then
 Endif
 
 LastHL = Last.Text
-TextEditor1.Highlight = IIf(Last.text = "None", "", Lower(Last.text))
-Settings["View/Highlight"] = Last.Tag
-End Select
+$tEditor.Highlight = IIf(Lower(Last.text) = "none", "", Lower(Last.text))
+LoadHighlights()
+'Settings["View/Highlight"] = Last.Tag
+
   Catch
     Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
 End
 
-
 Public Sub Form_Close()
 If TermF.Visible Then TermF.Close()
 If HighLights.Visible Then HighLights.Close()
+If fSearch.Visible Then fSearch.Close()
+If fOptions.Visible Then fOptions.Close()
+
 Settings["Config/WinDims"] = [Me.Left, Me.Top, Me.Width, Me.Height]
-'If Comp(TextBU, TextEditor1.Text, gb.Match) Then
-If TextBU <> TextEditor1.Text Then
- Me.Tag = Message.Warning("Text has changed, would you like to save it?", "Save", "Forget", "Don't Quit")
-  If Me.Tag = 1 Then
-    Btn_Save_Click()
- Else If Me.Tag = 3 Then
-   Stop Event
-   Return
+
+Dim i As Integer
+For i = 0 To Tabs.Count - 2
+
+Me.Tag = CheckChangeOnClose(i)
+ If Me.Tag = 3 Then
+ Stop Event
+ Return
+ Else If Me.Tag = 2 Then
+  $tEditor.Tag[bChanged] = False
+ Endif
+Next
+
+If p Then p.Kill()
+
+Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+
+End
+
+Public Sub CheckChangeOnClose(TabIndex As Integer) As Integer
+Dim retval As Integer = 0
+
+  If $tEditor.Tag[bChanged] Then
+  retval = Message.Warning("Text has changed, for file...\n" & File.Name($tEditor.Tag[sPath]) & "\nWould you like to save it?", "Save", "Forget", "Don't Quit")
+  If retval = 1 Then
+    If $tEditor.Tag[sPath] = "-" Then
+    Btn_SaveAs_Click()
+      Else
+    Btn_Save_Click(False, TabIndex)
+    Endif
   Endif
 Endif
-If p Then p.Kill()
+Return retval
+  
 End
 
 
-Public Sub ReadtoList()
-Dim s As String, a As Array, ln As Integer = 1, ins As Integer
-
- Me.Title = "[" & User.Name & "]" & LoadedFile
-
-a = Split(TextEditor1.Text, "\n")
-textLines = a.Count
-FuncGview.Clear()
+Public Sub ReadtoList(Optional quiet As Boolean = False, Optional bFromText As Boolean = False)
+Dim s, sTemp As String, a As Array, ln As Integer = 1, ins As Integer
+object.Lock(FuncGview)
+'FuncGview.Clear()
 FuncGview.Rows.Count = 1
 FuncGview.Refresh()
 FuncGview[0, 0].Text = "1"
 FuncGview[0, 1].Text = "Top of file"
+$tEditor = Tabs.Current.Children[0]
+
+If Not bFromText Then
+If $tEditor.Tag[sFunctions].Count > 0 Then
+ Dim sNum, sTxt As String
+  For ln = 0 To $tEditor.Tag[sFunctions].Count - 1
+'Debug $tEditor.Tag[sFunctions][ln][0]
+sNum = $tEditor.Tag[sFunctions][ln][0]
+sTxt = $tEditor.Tag[sFunctions][ln][1]
+
+    FuncGview.Rows.Count += 1
+    FuncGview[FuncGview.Rows.Max, 0].Text = sNum
+    FuncGview[FuncGview.Rows.Max, 1].Text = sTxt
+  Next
+aString = []
+Goto CheckDone
+Endif
+Endif
+
+
+If Not InStr($tEditor.Text, "\n") Then Goto CheckDone
+a = Split($tEditor.Text, "\n")
+textLines = a.Count
 
 For Each s In a
- Select ComboBox2.Index
+  sString = Trim(s)
+ Select $tEditor.Tag[vType][1]
  Case 1
-  ins = InStr(word1(s), "()")
+   
+  ins = InStr(RTrim(sString), "()", String.Len(sString) - 2)
+  If ins <> 0 And If sString[sString.Len - 3, 1] = "=" Then 
+  ins = 0
+ Goto CheckPoint
+  Else If ins <> 0 Then
+    TrimFName()
+ Goto CheckPoint
+  Endif
+  sTemp = Word1(sString)
+  ins = InStr(sTemp, "()", String.Len(sTemp) - 2)
+  If ins > 1 Then 
+    sString = sTemp[0, sTemp.Len - 2]
+  Goto CheckPoint
+  Endif
+
+  If InStr(LTrim(sString), "function") = 1 Then
+  ins = TrimFName("function ")
+  Goto CheckPoint
+  Endif
+
+  ins = InStr(sString, "() {", sString.Len - 4)
+   If ins <> 0 Then TrimFName()
  Case 2
-  ins = InStr(s, ") {")
+  ins = InStr(sString, "() {", sString.Len - 4)
  Case 3
-  s = Trim(s)
-  ins = InStr(s, "Public Sub ")
-  If ins <> 1 Then ins = InStr(s, "Private Sub ")
-  If ins <> 1 Then ins = InStr(s, "Public Function ")
-  If ins <> 1 Then ins = InStr(s, "Private Function ")
-  If ins <> 1 Then ins = InStr(s, "Sub ")
-  If ins <> 1 Then ins = InStr(s, "Function ")
+  ins = TrimFName("Public Sub ")
+  If ins <> 1 Then ins = TrimFName("Private Sub ")
+  If ins <> 1 Then ins = TrimFName("Public Function ")
+  If ins <> 1 Then ins = TrimFName("Private Function ")
+  If ins <> 1 Then ins = TrimFName("Sub ")
+  If ins <> 1 Then ins = TrimFName("Function ")
   If ins <> 1 Then ins = 0
+
  End Select
 
-  If ins > 0 Then
+CheckPoint:
+  If ins <> 0 Then
     FuncGview.Rows.Count += 1
     FuncGview[FuncGview.Rows.Max, 0].Text = Str(ln)
-    FuncGview[FuncGview.Rows.Max, 1].Text = s
+    FuncGview[FuncGview.Rows.Max, 1].Text = sString
+    aString.Add([Str(ln), sString])
     ins = 0
   Endif
 
 ln += 1
 Next
-
+CheckDone:
   If FuncGview.Rows.Count = 1 Then
-    Balloon("No search resulst for " & ComboBox2.Text, ComboBox2)
-   If ComboBox2.Index <> ComboBox2.List.Max Then
-    Object.Lock(ComboBox2)
-    ComboBox2.Index += 1
-    Object.UnLock(ComboBox2)
-    ReadtoList()
-    Return
-   Endif
+   If Not quiet Then Ballon("No search resulst for " & cbSearch.Text, cbSearch)
+  Else
+  If aString.Count > 0 Then $tEditor.Tag[sFunctions] = aString.Copy()
   Endif
 
 FuncGview.Rows.Count += 1
 FuncGview[FuncGview.Rows.Max, 0].Text = Str(ln - 1)
 FuncGview[FuncGview.Rows.Max, 1].Text = "Bottom of file"
 FuncGview.Columns.Ascending = True
-FuncGview.Refresh()
 FuncGview_Sort()
+object.UnLock(FuncGview)
+
 End
 
-Public Function word1(st As String) As String
+Public Sub TrimFName(Optional txt As String = "", Optional bToBracket As Boolean = True) As Integer
+
+ If txt <> "" Then
+  Dim i As Integer = InStr(LTrim(sString), txt)
+  If i <> 1 Then Return 0
+  sString = String.Mid$(sString, i + txt.Len, sString.Len - txt.Len)
+ Endif
+
+  If bToBracket Then sString = Trim(Left(sString, InStr(sString, "(") - 1))
+'  Debug sString
+Return 1
+End
+
+
+
+Public Function Word1(st As String) As String
 Dim rs As String
 If st = "" Then Return "na"
 rs = IIf(InStr(st, " "), Split(st, " ")[0], st)
 Return rs
 End
 
-
-Public Sub Btn_Open_Click()
-Dialog.Title = "Open file..."
-Dialog.ShowHidden = True
-Dialog.Path = LoadedFile
-If Dialog.OpenFile() Then Return
-If TextEditor1.Highlight = "gambas" Then TextEditor1.Highlight = ""
-TextEditor1.Load(Dialog.Path)
- LoadedFile = Dialog.Path
- TextBU = TextEditor1.Text
-CheckFileType()
-ReadtoList()
+Public Sub ActiveEditor() As TextEditor
+Return Tabs[Tabs.Index].Children[0]
 End
+
+Public Sub LoadFile(FileName As String)
+  
+If $tEditor.Highlight = "gambas" Then $tEditor.Highlight = ""
+Me.Title = "Loading file..."
+Object.Lock($tEditor)
+$tEditor.Load(FileName)
+Object.UnLock($tEditor)
+eTag = NewTag()
+eTag[sPath] = FileName
+eTag[sModified] = Stat(FileName).LastModified
+$tEditor.Tag = eTag
+
+ Tabs[Tabs.Index].Text = File.Name(FileName)
+ 
+ If CheckFileType() Then
+   Message.Error("File not text type!")
+ Else
+   ReadtoList()
+ Endif
+
+Catch
+    Message.Error(Error.Text)
+End
+
+
+Public Sub Btn_Open_Click(Optional sFile As String = "", Optional NewTab As Boolean = False)
+If sFile = "" Then
+ Dialog.Title = "Open file..."
+ Dialog.ShowHidden = True
+ Dialog.Path = $tEditor.Tag[sPath]
+ If Dialog.OpenFile() Then Return
+Else
+ Dialog.Path = sFile
+Endif
+
+If NewTab Then MenuNewTab_Click()
+Wait
+
+$tEditor.Tag = NewTag()
+LoadFile(Dialog.Path)
+End
+
+Public Sub AddRecent()
+If $tEditor.Tag[sPath] = "-" Then Return
+  Dim i As Integer
+  Dim sets As String[] = Settings["Config/Recent", []]
+  If sets.Count > 0 Then
+    For i = 0 To sets.Max
+      If sets[i] = $tEditor.Tag[sPath] Then Return
+    Next
+  Endif
+sets.Add($tEditor.Tag[sPath])
+If sets.Count > 20 Then sets.Remove(0, 1)
+Settings["Config/Recent"] = sets
+Recents2Menu()
+End
+
+Public Sub Recents2Menu()
+  Dim m As Menu, i As Integer
+    Dim sets As String[] = Settings["Config/Recent", []]
+
+  If sets.Count > 0 Then
+  MenuRecent.Children.Clear()
+    For i = 0 To sets.Max
+      m = New Menu(Me.MenuRecent) As "MenuRecent"
+      m.Tag = sets[i]
+       m.Text = IIf(sets[i].Len > 80, Left(sets[i], 29) & " ... " & Right(sets[i], 49), sets[i])
+    Next
+  Endif
+  
+End
+
+Public Sub MenuRecent_Click()
+  
+  Btn_Open_Click(Last.Tag)
+  
+End
+
 
 Public Sub Form_Resize()
-'VSplit1.Layout = [40, Me.Height - 40]
 HSplit1.Layout = [FMain.Width - FuncGviewWidth, FuncGviewWidth]
-FMain.Refresh()
-'HSplit2.Layout = [Me.width - 150, 150]
-'VSplit2.Layout = [VSplit1.Layout.First - 40, 40]
+'FMain.Refresh()
 End
 
-Public Sub FuncGview_Sort()
+Public Sub FuncGview_Sort() ' adapted from the gambas wiki page
   If FuncGview.Rows.Count = 0 Then Return
   
   Dim Values, ValueSorted As New String[]
@@ -341,19 +660,17 @@ FuncGView.Refresh()
 End
 
 Public Sub FuncGview_Select()
-'TextEditor1.Goto(0, Val(FuncGview[FuncGview.Row, 0].Text) - 1, False)
-TextEditor1.GotoCenter(0, Val(FuncGview[FuncGview.Row, 0].Text) - 1)
-TextEditor1.SetFocus()
+$tEditor.GotoCenter(0, Val(FuncGview[FuncGview.Row, 0].Text) - 1)
+$tEditor.SetFocus()
 End
 
-Public Sub ComboBox2_Click()
-If ComboBox2.Index = 0 Then Return
+Public Sub cbSearch_Click()
+If cbSearch.Index = 0 Then Return
 
-ComboBox2.Tag = ComboBox2.Index
+cbSearch.Tag = cbSearch.Index
 ReadtoList()
-ComboBox2.Index = 0
+cbSearch.Index = 0
 End
-
 
 Public Sub MenuOpARThis_Click(Optional FileName As String = "")
 Dim s As String
@@ -361,37 +678,54 @@ Dim s As String
   If User.Name <> "root" Then
   s = Args[0]
    If s[0, 2] = "./" 
-    s = Application.Path & "/" & s[2, s.Len - 2]
+    s = Application.sPath & "/" & s[2, s.Len - 2]
    Else If InStr(Args[0], "/") = 0 Then
-    s = Application.Path & "/" & s
+    s = Application.sPath & "/" & s
    Endif
 
-  Shell Quote(s) & " -r -f '" & IIf(FileName = "", LoadedFile, FileName) & "'"
+  Shell Quote(s) & " -r -f '" & IIf(FileName = "", $tEditor.Tag[sPath], FileName) & "'"
   If Message.Question("Close this window?", "Yes", "No") = 1 Then Quit
   Endif
 End
 
 
 Public Sub Btn_Save_Click(Optional quiet As Boolean = False)
-If TextEditor1.Text = TextBU Then
-  If Not quiet Then Balloon("File not changed so\nnot saved", Me.Btn_Save)
+
+ If $tEditor.Tag[sPath] = "-" Then
+   If Dialog.SaveFile() Then Return
+   $tEditor.Tag[sPath] = Dialog.Path
+
+ Else
+  If Not $tEditor.Tag[bChanged] Then
+  If Not quiet Then Ballon("File not changed so\nnot saved", Me.Btn_Save)
   Return
+ Endif
 Endif
-  File.Save(LoadedFile, TextEditor1.Text)
-  If Not quiet Then Balloon("File saved okay", Me)
-  TextBU = TextEditor1.Text
+
+ If fOptions.cbSaveConfirm.Value Then
+   If Message.Warning("Saving..\n" & $tEditor.Tag[sPath], "OK", "Cancel") <> 1 Then Return
+ Endif
+ 
+  File.Save($tEditor.Tag[sPath], $tEditor.Text)
+  $tEditor.Tag[sModified] = Stat($tEditor.Tag[sPath]).LastModified
+  If Not quiet Then Ballon("File saved okay", Me.Btn_Save)
+  $tEditor.Tag[bChanged] = False
+
+
 Catch
-  Message.Error(Error.Text)
+    Message.Error(Error.Text & "\n" & Error.Where & "\n" & Error.Backtrace.Join("\n"))
+
 End
 
 Public Sub Btn_SaveAs_Click()
 Dialog.Title = "Save file as.."
-Dialog.Path = LoadedFile
+Dialog.Path = $tEditor.Tag[sPath]
 If Dialog.SaveFile() Then Return
-File.Save(Dialog.Path, TextEditor1.Text)
-LoadedFile = Dialog.Path
-TextBU = TextEditor1.Text
-Me.Title = LoadedFile
+File.Save(Dialog.Path, $tEditor.Text)
+$tEditor.Tag[sPath] = Dialog.Path
+$tEditor.Tag[sModified] = Stat($tEditor.Tag[sPath]).LastModified
+$tEditor.Tag[bChanged] = False
+Me.Title = Dialog.Path
 Catch
   Message.Error(Error.Text)
 End
@@ -406,6 +740,12 @@ End
 
 Public Sub MenuOp_Click()
 Btn_Open_Click()
+End
+
+Public Sub MenuOpenInTab_Click()
+
+  Btn_Open_Click("", True)
+
 End
 
 Public Sub MenuOpARReq_Click()
@@ -426,23 +766,18 @@ Settings["List/Font"] = Dialog.Font.ToString()
 End
 
 Public Sub MenuEdFnt_Click()
-Dialog.Font = TextEditor1.Font
+Dialog.Font = $tEditor.Font
 If Dialog.SelectFont() Then Return
-TextEditor1.Font = Dialog.Font
-Settings["View/Font"] = Dialog.Font.ToString()
+Dim ted As TextEditor = Tabs.Children[0]
+ted.Font = Dialog.Font
+Settings["View_" & $tEditor.Highlight & "/Font"] = Dialog.Font.ToString()
 Settings.Save()
 End
 
-Public Sub MenuEdBG_Click()
-Dialog.Color = TextEditor1.Background
-If Dialog.SelectColor() Then Return
-TextEditor1.Styles[Highlight.Background].Color = Dialog.Color
-Settings["View/BGCol"] = Dialog.Color
-End
 
 Public Sub MenuWWrap_Click()
-TextEditor1.Wrap = Last.Value
-Settings["View/WordWrap"] = TextEditor1.Wrap
+$tEditor.Wrap = Last.Value
+Settings["View_" & $tEditor.Highlight & "/WordWrap"] = $tEditor.Wrap
 End
 
 Public Sub Menu_gbs_Click()
@@ -451,12 +786,12 @@ Public Sub Menu_gbs_Click()
 End
 
 Public Sub MenuPrBar_Click()
-TextEditor1.ShowPreview = Last.Value
-Settings["View/ShowPreview"] = TextEditor1.ShowPreview
+$tEditor.ShowPreview = Last.Value
+Settings["View_" & $tEditor.Highlight & "/ShowPreview"] = $tEditor.ShowPreview
 End
 Public Sub MenuShowLines_Click()
-TextEditor1.ShowLineNumber = Last.Value
-Settings["View/ShowLines"] = TextEditor1.ShowLineNumber
+$tEditor.ShowLineNumber = Last.Value
+Settings["View_" & $tEditor.Highlight & "/ShowLines"] = $tEditor.ShowLineNumber
 End
 
 
@@ -468,10 +803,10 @@ If Not Exist(User.Home &/ ".config/gambas3/gambas3.conf") Then
 Endif
  ImportG3()
 Else
- TextEditor1.Font = Font[Settings["View/Font", TextEditor1.Font.ToString()]]
+ $tEditor.Font = Font[Settings["View_" & $tEditor.Highlight & "/Font", $tEditor.Font.ToString()]]
  LoadHighlights()
 Endif
-Settings["View/UseG3Theme"] = Last.Value
+Settings["View_" & $tEditor.Highlight & "/UseG3Theme"] = Last.Value
 End
 
 
@@ -489,16 +824,16 @@ If sa.Count > 1 Then
 For i = 1 To sa.Max
 Select Lower(sa[i])
   Case "bold"
-    TextEditor1.Styles[hi].Bold = True
+    $tEditor.Styles[hi].Bold = True
   Case "underline"
-    TextEditor1.Styles[hi].Underline = True
+    $tEditor.Styles[hi].Underline = True
   Case "dotted"
-    TextEditor1.Styles[hi].Dotted = True
+    $tEditor.Styles[hi].Dotted = True
 End Select
 Next
 Endif
 sa[0] = Replace(sa[0], "#", "&H")
-If sa[0] <> 0 Then TextEditor1.Styles[hi].Color = Val(sa[0])
+If sa[0] <> 0 Then $tEditor.Styles[hi].Color = Val(sa[0])
 Endif
 Next
 Catch
@@ -506,6 +841,7 @@ Catch
 End
 
 Public Sub HighlightVal(s As String) As Integer
+If Lower(s) = "custom" Then Return Highlight.Custom
 Return HighlightStr.Find(s)
 End
 
@@ -515,32 +851,49 @@ FuncGviewWidth = FuncGview.Width
   Settings["View/FuncListWidth"] = FuncGview.Width
 End
 
+Public Sub TextEditor1_Change()
+  If Not $tEditor.Tag[bChanged] Then $tEditor.Tag[bChanged] = True
+End
+
+
+
 Public Sub TextEditor1_KeyPress()
 Select Key.Code
   Case Key.Return, Key.Enter
-    ReadtoList()
+    ReadtoList(True)
     Case Key.BackSpace, Key.Del
-      If TextEditor1.Count <> textLines Then ReadtoList()
+      If $tEditor.Count <> textLines Then ReadtoList(True, True)
 End Select
-SrchBox.Tag = TextEditor1.Line
+SrchBox.Tag = $tEditor.Line
 End
 
 
 Public Sub Btn_Reload_Click()
 
- TextEditor1.Load(LoadedFile)
- TextBU = TextEditor1.Text
- ReadtoList()
+ $tEditor.Load($tEditor.Tag[sPath])
+ $tEditor.Tag[sModified] = Stat($tEditor.Tag[sPath]).LastModified
+ $tEditor.Tag[bChanged] = False
+ ReadtoList(True)
 
 End
 
 Public Sub TextEditor1_GotFocus()
-If LoadedFile <> "" And Exist(LoadedFile) Then
-  If TextBU <> File.Load(LoadedFile) Then
-    If Message.Warning("File on disk has changed!", "Reload", "Do not Reload") = 1 Then Btn_Reload_Click()
+
+If Last.Tag[sPath] <> "" Then
+If Not Exist(Last.Tag[sPath]) Then Return
+
+
+  If Stat($tEditor.Tag[sPath]).LastModified <> $tEditor.Tag[sModified] Then
+    If Message.Warning("File on disk has changed!\n" & File.Name($tEditor.Tag[sPath]), "Reload", "Do not Reload") = 1 Then 
+    Btn_Reload_Click()
+    Else
+    $tEditor.Tag[bChanged] = False
+    Endif
   Endif
 Endif
 
+Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
 End
 
 Public Sub MenuShel_Click()
@@ -555,10 +908,10 @@ TermF.Activate()
 TermF.TView.SetFocus()
 
 Wait 0.5
-'.Input("cd " & Quote(File.Dir(LoadedFile)) & "\n")
+'.Input("cd " & Quote(File.Dir(TabPanel1[TabPanel1.Index].Tag[0])) & "\n")
 .Clear()
-TermF.Title = "Running: " & LoadedFile
-p = .Exec([LoadedFile], ["2>&1"])
+TermF.Title = "Running: " & $tEditor.Tag[sPath]
+p = .Exec([$tEditor.Tag[sPath]], ["2>&1"])
 .SetFocus()
 End With
 While p.State = Process.Running
@@ -566,54 +919,70 @@ While p.State = Process.Running
 Wend
 
 If p Then p.Kill()
-TermF.Close()
+If fOptions.cbCloseTerm.Value Then TermF.Close()
 End
 
 Public Sub MenuCut_Click()
-  TextEditor1.Cut()
+  $tEditor.Cut()
 End
 Public Sub MenuCopy_Click()
-  TextEditor1.Copy()
+  $tEditor.Copy()
 End
 Public Sub MenuPaste_Click()
-  TextEditor1.Paste()
+  $tEditor.Paste()
 End
 
 Public Sub MenuCloseS_Click()
 
-  TextEditor1.CloseStrings = Last.Value
-  Settings["Edit/CloseStrings"] = Last.Value
+  $tEditor.CloseStrings = Last.Value
+  Settings["Edit_" & $tEditor.Highlight & "/CloseStrings"] = Last.Value
 
 End
 Public Sub MenuCloseB_Click()
 
-  TextEditor1.CloseBraces = Last.Value
-  Settings["Edit/CloseBraces"] = Last.Value
+  $tEditor.CloseBraces = Last.Value
+  Settings["Edit_" & $tEditor.Highlight & "/CloseBraces"] = Last.Value
 
 End
 
-Public Sub Btn_Search_Click()
+Public Sub Btn_Search_Click(Optional Advanced As Boolean)
 Dim bBackToStart As Boolean = False
+Dim iCase, iEnd, iStep As Integer
 
-If Me.SrchBox.Text = "" Then Return
+If Me.SrchBox.Text = "" Then
+fSearch.Show()
+ Return
+Endif
 
 Dim i, iLPos, iCPos As Integer, aStr As String[]
-aStr = Split(TextEditor1.Text, gb.Lf)
-iLPos = TextEditor1.Line
-iCPos = TextEditor1.Column
+aStr = Split($tEditor.Text, gb.Lf)
+iLPos = $tEditor.Line
+iCPos = $tEditor.Column
+
+iCase = gb.IgnoreCase
+If Advanced And If fSearch.cbCase.Value Then iCase = gb.Match
+
+iStep = IIf(fSearch.cbReverse.Value, -1, 1)
+iEnd = IIf(fSearch.cbReverse.Value, 0, aStr.Max)
 
 BeginSearch:
-For i = iLPos To aStr.Max
-iCPos = InStr(aStr[i], SrchBox.Text, iCPos + 1, gb.IgnoreCase)
+For i = iLPos To iEnd Step iStep
+If iStep = 1 Then
+iCPos = InStr(aStr[i], fSearch.tbSearch.Text, iCPos + 1, iCase)
+Else
+iCPos = RInStr(aStr[i], fSearch.tbSearch.Text, iCPos, iCase)
+Endif
+
 If iCPos > 0 Then
-  iLPos = i
-  Break
+  If bBackToStart Then Ballon("End of document reached.\nSearched from the other end.", Btn_Search)
+    iLPos = i
+    Break
 Endif
 Next
 
 If iCPos = 0 Then 
   If Not bBackToStart Then
-    iLPos = 0
+    iLPos = IIf(istep = 1, 0, aStr.Max)
     bBackToStart = True
     Goto BeginSearch
   Else
@@ -621,8 +990,8 @@ If iCPos = 0 Then
    Return
   Endif
 Endif
-TextEditor1.GotoCenter(iCPos - 1, iLPos)
-TextEditor1.Select(iCPos - 1, iLPos, iCPos + (SrchBox.Text.Len - 1), iLPos)
+$tEditor.GotoCenter(iCPos - 1, iLPos)
+$tEditor.Select(iCPos - 1, iLPos, iCPos + (fSearch.tbSearch.Text.Len - 1), iLPos)
 
 End
 
@@ -632,8 +1001,152 @@ Public Sub BtnExecCom_Click()
 
 End
 
+Public Sub SrchBox_Change()
+
+    fSearch.tbSearch.Text = SrchBox.Text
+
+End
+
+
 Public Sub SrchBox_Activate()
 
+  fSearch.tbSearch.Text = SrchBox.Text
   Btn_Search_Click()
 
+End
+
+Public Sub Btn_Search2_Click()
+
+  fSearch.Show()
+
+End
+
+Public Sub MenuPrefs_Click()
+
+  fOptions.Show()
+
+End
+
+Public Sub MenuEdBG_Click()
+
+  HighLights.Show()
+
+End
+
+
+
+Public Sub Tabs_Click()
+  
+  $tEditor = Tabs.Current.Children[0]
+Dim vQ As Boolean = bQuiet
+bQuiet = True
+  'CheckFileType(True)
+  ReadtoList(True)
+bQuiet = vQ
+Catch
+  Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+  
+End
+
+Public Sub NewTag() As Variant[]
+  
+  Return ["-", "", False, ["", 0, 0, ""], [], 0]
+  
+End
+
+
+
+Public Sub MenuNewTab_Click()
+  Dim nEd As TextEditor
+
+   Object.Lock(Tabs)
+   Tabs.Count += 1
+   Tabs.Index = Tabs.Count - 1
+   Tabs.Text = "New file" & Str(Tabs.Count - 1)
+   nEd = New TextEditor(Tabs) As "TextEditor1"
+   $tEditor = nEd
+   $tEditor.Name = "TextEditor" & Str(Tabs.Count)
+   $tEditor.Tag = NewTag()
+   Object.Lock($tEditor)
+   $tEditor.SetFocus()
+   Object.UnLock($tEditor)
+   Tabs.Refresh()
+   Object.UnLock(Tabs)
+FuncGview.Rows.Count = 0
+  
+End
+
+Public Sub Mnu_CloseTab_Click(Optional iIndex As Integer = Tabs.Index)
+  If Tabs.Count = 1 Then 
+  Me.Close()
+  Return
+  Endif
+
+ Me.Tag = CheckChangeOnClose(iIndex)
+ If Me.Tag = 3 Then
+ Stop Event
+ Return
+ Else If Me.Tag = 2 Then
+ $tEditor.Tag[bChanged] = False
+ Endif
+
+  $tEditor = Tabs[iIndex].Children[0]
+  $tEditor.Delete()
+  Tabs[iIndex].Delete()
+CheckFileType(True)
+ReadtoList()
+
+Catch
+    Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
+End
+
+
+Public Sub MenuMacroStop_Click()
+
+If mMacro.State = mMacro.Recording Then mMacro.Stop()
+Debug mMacro.Data.Count
+End
+
+Public Sub Tabs_Close(Index As Integer)
+Me.Tag = CheckChangeOnClose(Index)
+ If Me.Tag = 3 Then
+ Stop Event
+ Return
+ Else If Me.Tag = 2 Then
+   $tEditor.Tag[bChanged] = False
+ Endif
+
+  Mnu_CloseTab_Click(Index)
+
+End
+
+Public Sub btnAddTab_Click()
+
+  MenuNewTab_Click()
+
+End
+
+Public Sub NewType_Click()
+ 
+  MenuNewTab_Click()
+  Select Last.Tag
+    Case "bash"
+      SetFileType(sHigh_SH_Compat, 1, True, "bash shell Script")
+      $tEditor.Text = "#!/usr/bin/env bash\n\n# New bash Script file...\n\n"
+    Case "bash-c"
+      SetFileType(sHigh_SH_Compat, 1, True, "bash shell Script")
+    Case "bash-f"
+      SetFileType(sHigh_SH_Compat, 1, True, "bash shell Script")
+    Case "gambas"
+       SetFileType("gambas", 3, True, "Gambas Shell Script")
+       $tEditor.Text = "#!/usr/bin/env gbs3\n\n' Gambas script file\n\n"
+    Case "gambas-gui"
+      SetFileType("gambas", 3, True, "Gambas Shell Script")
+      Case Else
+        Return
+  End Select
+
+'CheckFileType(True)
+LoadHighlights()
+$tEditor.Tag[bChanged] = True
 End

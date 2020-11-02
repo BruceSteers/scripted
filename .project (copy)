@@ -1,7 +1,7 @@
 # Gambas Project File 3.0
 Title=ScriptED
 Startup=Start
-Icon=scripted.png
+Icon=.pencil.png
 Version=1.0.0
 Component=gb.args
 Component=gb.image
@@ -16,8 +16,8 @@ Component=gb.settings
 Component=gb.term
 Component=gb.form.terminal
 Component=gb.mime
-ArgumentList=[["/etc/fstab"],["/media/bonus/Elements/LinuxStuff/Modules/GRoot_class/GRoot.gbs"],["/media/bonus/SSDiskspace/git/gambas3-compile-and-install/gambas3-update-compile-and-install"],["/home/bonus/new file"]]
-CurrentArgumentList=["/media/bonus/Elements/LinuxStuff/Modules/GRoot_class/GRoot.gbs"]
+ArgumentList=[["/etc/fstab"],["/media/bonus/Elements/LinuxStuff/Modules/GRoot_class/GRoot.gbs"],["/media/bonus/SSDiskspace/git/gambas3-compile-and-install/gambas3-update-compile-and-install"],["/media/bonus/SSDiskspace/git/gambas-main-mint/configure"],["/home/bonus/new file"]]
+CurrentArgumentList=["/media/bonus/SSDiskspace/git/gambas-main-mint/configure"]
 Environment="GB_PCODE_VERSION=3.8"
 TabSize=2
 Language=en_GB

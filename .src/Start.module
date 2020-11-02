@@ -26,7 +26,7 @@ Endif
 
 ' TEST FILE
 'FMain.LoadOnStart = "/etc/fstab"
-'FMain.LoadOnStart = Application.Path &/ "gambas3-update-compile-and-install"
+'FMain.LoadOnStart = Application.Path &/ "./.src/FMain.class"
 
 If Exist(FMain.LoadOnStart) Then 
  If Access(FMain.LoadOnStart, gb.Write) = False Then goroot = True

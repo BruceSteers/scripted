@@ -1,0 +1,47 @@
+' Gambas class file
+
+
+Public Sub btnFind_Click()
+
+FMain.Btn_Search_Click(True)
+
+End
+
+Public Sub btnCancel_Click()
+
+  Me.Close
+
+End
+
+
+Public Sub Form_Open()
+
+  If Me.tbSearch.Text = "" Then Me.tbSearch.Text = Clipboard.Paste("text/plain")
+  Me.tbSearch.SetFocus()
+  Me.tbSearch.SelectAll()
+End
+
+Public Sub tbSearch_Change()
+
+  FMain.SrchBox.Text = Last.Text
+
+End
+
+Public Sub btnReplace_Click()
+
+ With FMain.TextEditor1
+  If Not .Selected Then 
+   FMain.Btn_Search_Click(True)
+   Return
+  Endif
+  If .SelectedText <> tbSearch.Text Then 
+   FMain.Btn_Search_Click(True)
+   Return
+  Endif
+  If Not .Selected Then Return
+  Clipboard.Copy(Me.tbReplace.Text)
+  .Paste()
+  FMain.Btn_Search_Click(True)
+ End With
+
+End

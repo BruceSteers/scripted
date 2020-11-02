@@ -2,27 +2,57 @@
 
 { Form Form
   MoveScaled(0,0,88,54)
+  Icon = Picture[".pencil.png"]
   Arrangement = Arrange.Vertical
+  Spacing = True
   { HPanel1 Panel
     MoveScaled(1,0,87,48)
     Expand = True
     Arrangement = Arrange.Horizontal
+    Spacing = True
     { Grid1 GridView
       MoveScaled(0,0,29,48)
       Mode = Select.Single
       Header = GridView.Horizontal
       ScrollBar = Scroll.Vertical
     }
-    { ColorChooser1 ColorChooser
-      MoveScaled(37,0,49,48)
+    { VPanel1 Panel
+      MoveScaled(29,0,56,48)
       Expand = True
+      Arrangement = Arrange.Vertical
+      { ColorChooser1 ColorChooser
+        MoveScaled(0,0,55,42)
+        Expand = True
+      }
+      { HBox2 HBox
+        MoveScaled(2,43,51,4)
+        { Spring2 Spring
+          MoveScaled(2,2,2,1)
+        }
+        { CBox_Bold CheckBox
+          MoveScaled(10,0,9,3)
+          Text = ("Bold")
+        }
+        { Separator1 Separator
+          MoveScaled(23,1,1,2)
+        }
+        { CBox_UnderLine CheckBox
+          MoveScaled(29,0,13,3)
+          Text = ("Underline")
+        }
+        { Spring4 Spring
+          MoveScaled(47,1,2,1)
+        }
+      }
     }
   }
   { HBox1 HBox
-    MoveScaled(8,49,73,5)
+    MoveScaled(4,49,75,5)
+    Spacing = True
     { Btn_Save Button
-      MoveScaled(1,0,15,4)
-      Text = ("Save")
+      MoveScaled(1,0,22,4)
+      Text = ("Save and Close")
+      Default = True
     }
     { Spring1 Spring
       MoveScaled(28,1,4,3)
@@ -30,6 +60,7 @@
     { Btn_Revert Button
       MoveScaled(48,0,15,4)
       Text = ("Revert")
+      Cancel = True
     }
   }
 }

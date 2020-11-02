@@ -106,6 +106,7 @@ With btn = New Button(hb) As "BTN"
   .AutoResize = True
 End With
 fWindow.Height = fWindow.Children[0].Height + fWindow.Children[1].Height + fWindow.Font.TextHeight("A")
+mbPass.SetFocus()
 fWindow.Show()
 End
 
