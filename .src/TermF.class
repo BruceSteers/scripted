@@ -6,6 +6,7 @@ Me.Left = Settings["Term/Left", Me.Left]
 Me.Top = Settings["Term/Top", Me.Top]
 TermF.Width = Settings["Term/Width", TermF.Width]
 TermF.Height = Settings["Term/Height", TermF.Height]
+TView.SetFocus()
 End
 
 Public Sub Form_Close()
@@ -17,7 +18,7 @@ If FMain.p Then FMain.p.Kill()
 End
 
 
-Public Sub ToolButton1_Click()
+Public Sub tbCloseTerm_Click()
 
   Me.TView.Kill()
   Me.Close()

@@ -1,7 +1,7 @@
 # Gambas Form File 3.0
 
 { Form Form
-  MoveScaled(0,0,105,71)
+  MoveScaled(0,0,116.4286,76.1429)
   Text = ("+")
   Icon = Picture["scripted.png"]
   Persistent = True
@@ -66,6 +66,15 @@
     }
     { Menu7 Menu
     }
+    { MenuFind Menu
+      Text = ("Find")
+      Picture = Picture["icon:/16/find"]
+      { MenuFindNext Menu
+        Text = ("Next")
+        Picture = Picture["icon:/16/next"]
+        Shortcut = "F3"
+      }
+    }
     { Menu9 Menu
       Text = ("Editing Options")
       Picture = Picture["icon:/16/options"]
@@ -128,9 +137,10 @@
   }
   { MenuTools Menu
     Text = ("Tools")
-    { MenuShel Menu
+    { MenuShel Menu RunCom
+      Name = "MenuShel"
       Text = ("Run in Terminal")
-      Shortcut = "Ctrl+R"
+      Shortcut = "F5"
     }
     { MenuMacro Menu
       Text = ("Macro Recorder (Empty)")
@@ -138,17 +148,21 @@
       { MenuMacroStart Menu
         Text = ("Start Recording")
         Picture = Picture["icon:/16/record"]
+        Shortcut = "Ctrl+F7"
       }
       { MenuMacroStop Menu
         Text = ("Stop Recording")
         Picture = Picture["icon:/16/stop"]
+        Shortcut = "Shift+F7"
       }
       { MenuMacroPlay Menu
         Text = ("Play Recording")
         Picture = Picture["icon:/16/play"]
+        Shortcut = "F7"
       }
       { MenuMacroClear Menu
         Text = ("Clear Macro")
+        Shortcut = "Alt+F7"
       }
     }
     { MenuTemplate Menu
@@ -206,80 +220,110 @@
     }
   }
   { HBox1 HBox
-    MoveScaled(1,1,98,5)
+    MoveScaled(1,1,114,5)
+    { Panel2 Panel
+      MoveScaled(0,1,1,3)
+    }
     { Btn_Open ToolButton
-      MoveScaled(0,1,5,3)
+      MoveScaled(2,0,5,5)
       Picture = Picture["icon:/32/open"]
     }
     { Btn_Reload ToolButton
-      MoveScaled(5,0,6,5)
+      MoveScaled(7,0,5,5)
       ToolTip = ("Reload")
       Picture = Picture["icon:/32/refresh"]
     }
     { Btn_Save ToolButton
-      MoveScaled(10,0,6,5)
+      MoveScaled(12,0,5,5)
       ToolTip = ("Save File")
       Picture = Picture["icon:/32/save"]
     }
     { Btn_SaveAs ToolButton
-      MoveScaled(16,0,6,5)
+      MoveScaled(17,0,5,5)
       ToolTip = ("Save As")
       Picture = Picture["icon:/32/save-as"]
     }
     { Separator1 Separator
       MoveScaled(22,1,1,3)
     }
-    { BtnExecCom ToolButton
-      MoveScaled(23,0,6,5)
+    { cbExeFlag CheckBox
+      MoveScaled(24,1,14,3)
+      AutoResize = True
+      Text = ("Executable")
+    }
+    { BtnExecCom ToolButton RunCom
+      Name = "BtnExecCom"
+      MoveScaled(38,0,6,5)
       ToolTip = ("Save and Execute File")
       Picture = Picture["icon:/32/terminal"]
     }
     { Separator2 Separator
-      MoveScaled(30,1,1,4)
+      MoveScaled(45,1,1,4)
     }
     { btnAddTab ToolButton
-      MoveScaled(31,0,4,5)
+      MoveScaled(46,0,4,5)
       AutoResize = True
       Picture = Picture["icon:/16/add"]
     }
     { Spring1 Spring
-      MoveScaled(38,1,4,2)
+      MoveScaled(51,1,4,2)
     }
     { SrchBox TextBox
-      MoveScaled(43,0,13,5)
+      MoveScaled(57,0,13,5)
       Tag = "0"
       Alignment = Align.Right
     }
     { Btn_Search ToolButton
-      MoveScaled(56,0,5,5)
+      MoveScaled(71,0,5,5)
       Picture = Picture["icon:/16/find"]
     }
     { Btn_Search2 ToolButton
-      MoveScaled(61,0,5,5)
+      MoveScaled(76,0,5,5)
       Picture = Picture["icon:/16/replace"]
     }
     { cbSearch ComboBox
-      MoveScaled(66,0,32,5)
+      MoveScaled(81,0,32,5)
       ReadOnly = True
       List = [("Search style"), ("Shell   'Parenthes()' 1st word"), ("C style ') {'"), ("Basic / Gambas (Sub,Function)")]
     }
   }
+  { HBox2 HBox
+    MoveScaled(1,6,90,5)
+    { Button2 Button
+      MoveScaled(3,1,12,3)
+      Text = ("start")
+    }
+    { Button3 Button
+      MoveScaled(16,1,12,3)
+      Text = ("stop")
+    }
+    { Button4 Button
+      MoveScaled(29,1,12,3)
+      Text = ("play")
+    }
+    { Button5 Button
+      MoveScaled(42,1,12,3)
+      Text = ("Clear")
+    }
+  }
   { HSplit1 HSplit
-    MoveScaled(0,8,103,58)
+    MoveScaled(0,12,115,58)
     Expand = True
+    Spacing = True
     { Tabs TabPanel
-      MoveScaled(0,0,74,56)
+      MoveScaled(2,1,83,56)
       Expand = True
-      Arrangement = Arrange.Fill
+      Arrangement = Arrange.Horizontal
       Padding = 5
       Closable = True
       CloseButton = True
       Index = 0
       Text = ("New File")
       { TextEditor1 TextEditor
-        MoveScaled(3,2,65,48)
+        MoveScaled(0,1,82,48)
         #Translate = False
         Background = &HA7C0C0&
+        Expand = True
         PopupMenu = "MenuEd"
         ShowPreview = True
         TabIndent = True
@@ -292,7 +336,7 @@
       Index = 0
     }
     { Panel1 Panel
-      MoveScaled(75,1,27,55)
+      MoveScaled(87,2,27,55)
       Arrangement = Arrange.Vertical
       { FuncGview GridView
         MoveScaled(1,1,24,49)

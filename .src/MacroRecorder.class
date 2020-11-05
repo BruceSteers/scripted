@@ -1,49 +1,173 @@
 ' Gambas class file
 
+' Gambas class file: MarcoRecorder1.0 by Bruce Steers
+
 Export
+Create Static
+Class X11
 
-Public Const _Properties As String = "Data,State,FKeys,Editor"
 
-Property Data As Variant[]
-Property FKeys As Key[]
-Property Editor As TextEditor
+Public Const _Properties As String = "Buffer,Modkey,State,Editor"
+
+Property Buffer As String[]
+Property Modkey As Boolean[][]
+
 Property State As Integer
+Property Editor As Object
 
-Private $vData As Variant[]
-Private $bFKeys As Key[]
+Private $sBuffer As String[]
+Private $bModKey As Boolean[][]
+
 Private $iState As Integer
-Private $tEditor As TextEditor
+Private $TextObject As Object
+Static Private $sSessionType As String
 
 Public Enum Empty, Idle, Recording, Playing
-Private Enum eAlt, eShift, eCtrl
 
-Private bAlt As Boolean
-Private bShift As Boolean
-Private bCtrl As Boolean
+Private $bAlt As Integer
+Private $bShift As Integer
+Private $bCtrl As Integer
+
+Private Const KeyUp As Boolean = False
+Private Const KeyDown As Boolean = True
 
 
-Public Sub TextEditorM_KeyRelease()
+Static Public Sub _init()
   
-  If $iState <> Recording Then Return
+  $sSessionType = LCase(Env["XDG_SESSION_TYPE"])
+  If $sSessionType <> "wayland" Then
+    $sSessionType = "x11"
+    Component.Load("gb.desktop.x11")
+  Endif
+  
+End
 
+Public Sub _new()
+  
+  $iState = Empty
+  $sBuffer = []
+  $bModKey = []
+
+End
+
+
+Public Sub TextObject_KeyRelease()
+
+Dim sVar As String
+
+$bCtrl = Key.Control
+$bShift = Key.Shift
+$bAlt = Key.Alt
+
+sVar = GetKey(Key.code, Key.Text)
+
+If Left(sVar) = "[" Then sVar = Left(Right(sVar, -1), -1)
+
+If IsModKey(sVar) Then 
  
-  If Key.Text Then Debug Key.Text; ";"; bAlt; ";"; bShift; ";"; bCtrl
-  
-End
-
-Public Sub TextEditorM_KeyPress()
-
-  If $iState <> Recording Then Return
-  bAlt = Key.Alt
-  bShift = Key.Shift
-  bCtrl = Key.Control
+ Try sVar = Conv(sVar, "UTF-8", "LATIN1")
+ $sBuffer.Add(sVar)
+ $bModKey.Add([True, False])
+'Debug $sBuffer[$sBuffer.Max]; " "; $bModKey[$sBuffer.Max][0]; " "; $bModKey[$sBuffer.Max][1]
+Endif
 
   
 End
+
+
+Public Sub TextObject_KeyPress()
+
+If $iState <> Recording Then Return
+
+Dim sVar As String
+
+$bCtrl = Key.Control
+$bShift = Key.Shift
+$bAlt = Key.Alt
+
+sVar = GetKey(Key.Code, Key.Text)
+  'Debug String.Code(sVar)
+  Debug sVar.len
+  If String.Code(sVar) = 3 Then 
+    AddControlChar("c")
+    Return
+  Else If String.Code(sVar) = 22 Then 
+    AddControlChar("v")
+    Return
+  Else If String.Code(sVar) = 24 Then 
+    AddControlChar("x")
+    Return
+  Else If String.Code(sVar) > 127 Then
+    If sVar.Len = 2 Then 
+    AddKeyChar(sVar)
+    Return
+    Endif
+  Endif
+
+If sVar.Len >= 2 Then 
+  Debug "is >= 2"
+ sVar = Left(Right(sVar, -1), -1)
+ Try sVar = Conv(sVar, "UTF-8", "LATIN1")
+Endif
+
+If Not sVar Then Return
+
+$sBuffer.Add(sVar)
+$bModKey.Add([IsModKey(sVar), True])
+
+ 'Debug $sBuffer[$sBuffer.Max]; " "; $bModKey[$sBuffer.Max][0]; " "; $bModKey[$sBuffer.Max][1]
+
+End
+
+
+Public Sub AddKeyChar(sChar As String)
+  
+  $sBuffer.Add("ISO_Level3_Shift")
+  $bModKey.Add([True, True])
+  $sBuffer.Add(sChar)
+  $bModKey.Add([False, True])
+  $sBuffer.Add("ISO_Level3_Shift")
+  $bModKey.Add([True, False])
+  
+  
+End
+
+Public Sub AddKeySym(sSym As String)
+  
+  $sBuffer.Add(sSym)
+  $bModKey.Add([False, False])
+  
+  
+End
+
+Public Sub AddControlChar(sChar As String)
+  
+  $sBuffer.Add("Control_L")
+  $bModKey.Add([True, True])
+  $sBuffer.Add(sChar)
+  $bModKey.Add([False, True])
+  $sBuffer.Add("Control_L")
+  $bModKey.Add([True, False])
+  
+End
+
+Private Sub IsModKey(sVar As String) As Boolean
+
+ Select sVar
+   Case "Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "AltGr"
+     Return True
+ End Select
+
+Return False
+
+End
+
 
 Public Sub Play() As Boolean
-  
-  If $vData.Count = 0 Then 
+
+  'Debug "Play..."
+
+  If $sBuffer.Count = 0 Then 
     Message("Macro Recording Empty")
     Return 1
   Else If $iState = Recording Then
@@ -51,38 +175,47 @@ Public Sub Play() As Boolean
     Return 1
   Endif
 
-Dim iCount As Integer
-For iCount = 0 To $vData.Max
-  Key
+Dim iCount As Integer, sVar As String
+
+$TextObject.SetFocus()
+
+For iCount = 0 To $sBuffer.Max
+
+sVar = $sBuffer[iCount]
+
+If sVar <> "" Then 
+ 'Debug sVar; " "; $bModKey[iCount][0]; " "; $bModKey[iCount][1]
+ If $bModKey[iCount][0] Then
+  X11.SendKey(sVar, $bModKey[iCount][1])
+Else
+ X11.SendKey(sVar, True)
+ X11.SendKey(sVar, False)
+ Endif
+Endif
 Next
+
   Return 0
-End
-
-
-Public Sub _new(Attatched_TextEditor As TextEditor)
   
-  $iState = Empty
-  $vData = []
-  $bFKeys = []
-  $tEditor = Attatched_TextEditor
-  Object.Attach($tEditor, Me, "TextEditorM")
-
+  
+  Catch
+      Message.Error(Error.Text & " " & sVar & "\n" & Error.Where & "\n" & Error.Backtrace.Join("\n"))
+  
 End
+
+
 
 Public Sub Clear()
   
-  $vData.Clear()
-  $bFKeys.Clear()
-  $vData = []
-  $bFKeys = []
+  $sBuffer.Clear()
+  $sBuffer = []
   $iState = Empty
 
 End
 
 
-Public Sub Kill()
+Public Sub Free()
   
-  Object.Detach($tEditor)
+  Object.Detach($TextObject)
   Clear()
   
 End
@@ -90,61 +223,206 @@ End
 
 Public Sub Stop()
   
-  $iState = Idle
-  
+ $iState = Idle
+ Object.Detach($TextObject)
+
+ If $sBuffer.Count > 0 Then
+   Dim c As Integer
+   For c = 0 To $sBuffer.Max
+     Debug $sBuffer[c]; "; "; $bModKey[c][0]; " "; $bModKey[c][1]
+   Next
+ Endif
+$TextObject.SetFocus()
 End
 
 Public Sub Record()
-  
+  Start()
+End
+
+Public Sub Start()
   $iState = Recording
-  
+  $TextObject.SetFocus()
 End
 
 
-Private Function Data_Read() As Variant[]
-
-  Return $vData
-
+Private Function Buffer_Read() As String[]
+  Return $sBuffer
 End
 
-Private Sub Data_Write(Value As Variant[])
-
-  $vData = Value
-
+Private Sub Buffer_Write(Value As String[])
+  $sBuffer = Value
 End
 
 Private Function State_Read() As Integer
-
   Return $iState
-
 End
 
 Private Sub State_Write(Value As Integer)
-
   $iState = Value
+End
+
+Private Function Editor_Read() As Object
+  Return $TextObject
+End
+
+Private Sub Editor_Write(Value As Object)
+  $TextObject = Value
+  Object.Attach($TextObject, Me, "TextObject")
+End
+
+Public Sub GetKey(icode As Integer, sChar As String) As String
+
+Select iCode
+Case Key.ShiftKey
+ Return "[Shift_L]"
+Case Key.Alt
+ Return "[Alt_L]"
+Case Key.Control 
+ Return "[Control_R]"
+Case Key.Left
+ Return "[Left]"
+Case Key.Right
+ Return "[Right]"
+Case Key.Up
+ Return "[Up]"
+Case Key.Down
+ Return "[Down]"
+'Case Key["AltGr"]
+' Return "[YAAAAAAAAAY]"  ' AltGr+Shift
+'Case Key["ISO_Level3_Shift"]
+' Return "[ISO_Level3_Shift]"  ' AltGr+Shift
+'Case Key["ISO_Level5_Shift"]
+' Return "[ISO_Level5_Shift]"  ' AltGr+Shift
+'Case key["Alt_L"]
+' Return "[Alt_L]"
+'Case key["Alt_R"]
+' Return "[Alt_R]"
+'Case Key["Shift_R"]
+' Return "[Shift_R]"
+'Case Key["Shift_L"] 
+' Return "[Shift_L]"
+'Case Key["Control_L"] 
+' Return "[Control_L]"
+'Case Key["Control_R"] 
+' Return "[Control_R]"
+Case Key.BackSpace
+ Return "[BackSpace]"
+Case Key.BackTab
+ Return "[BackTab]"
+Case Key.CapsLock
+ Return "[CapsLock]"
+Case Key.Del
+ Return "[Delete]"
+Case Key.Delete
+ Return "[Delete]"
+Case Key.End   
+ Return "[End]"
+Case Key.Enter   
+ Return "[Enter]"
+Case Key.Esc   
+ Return "[Escape]"
+Case Key.Escape   
+ Return "[Escape]"
+Case Key.F1   
+ Return "[F1]"
+Case Key.F10   
+ Return "[F10]"
+Case Key.F11   
+ Return "[F11]"
+Case Key.F12   
+ Return "[F12]"
+Case Key.F13    
+ Return "[F13]"
+Case Key.F14   
+ Return "[F14]"
+Case Key.F15   
+ Return "[F15]"
+Case Key.F16   
+ Return "[F16]"
+Case Key.F17   
+ Return "[F17]"
+Case Key.F18   
+ Return "[F18]"
+Case Key.F19   
+ Return "[F19]"
+Case Key.F2   
+ Return "[F2]"
+Case Key.F20   
+ Return "[F20]"
+Case Key.F21   
+ Return "[F21]"
+Case Key.F22   
+ Return "[F22]"
+Case Key.F23   
+ Return "[F23]"
+Case Key.F24   
+ Return "[F24]"
+Case Key.F3
+ Return "[F3]"
+Case Key.F4   
+ Return "[F4]"
+Case Key.F5   
+ Return "[F5]"
+Case Key.F6   
+ Return "[F6]"
+Case Key.F7
+ Return "[F7]"
+Case Key.F8
+ Return "[F8]"
+Case Key.F9
+ Return "[F9]"
+Case Key.Help
+ Return "[Help]"
+Case Key.Home
+ Return "[Home]"
+Case Key.Ins
+ Return "[Insert]"
+Case Key.Insert
+ Return "[Insert]"
+Case Key.Menu
+ Return "[Menu]"
+Case Key.MetaKey
+ Return "[MetaKey]"
+Case Key.NumLock
+ Return "[NumLock]"
+Case Key.PageDown
+ Return "[PageDown]"
+Case Key.PageUp
+ Return "[PageUp]"
+Case Key.Pause
+ Return "[Pause]"
+Case Key.PgDown
+ Return "[Page_Down]"
+Case Key.PgUp
+ Return "[Page_Up]"
+Case Key.Print
+ Return "[Print]"
+Case Key.Return
+ Return "[Return]"
+Case Key.ScrollLock
+ Return "[ScrollLock]"
+Case Key.Space
+ Return " "
+Case Key.SysReq
+ Return "[SysReq]"
+Case Key.Tab
+ Return "[Tab]"
+Case Else
+  
+Debug "getkey: sChar: '"; sChar; "' Chr code: "; String.Code(sChar)
+Return sChar
+End Select
+  
+End
+
+Private Function Modkey_Read() As Boolean[][]
+
+  Return $bModKey
 
 End
 
-Private Function FKeys_Read() As Key[]
+Private Sub ModKey_Write(Value As Boolean[][])
 
-  Return $bFKeys
-
-End
-
-Private Sub FKeys_Write(Value As Key[])
-
-  $bFKeys = Value
-
-End
-
-Private Function Editor_Read() As TextEditor
-
-  Return $tEditor
-
-End
-
-Private Sub Editor_Write(Value As TextEditor)
-
-  $tEditor = Value
+  $bModKey = Value
 
 End

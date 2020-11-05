@@ -14,10 +14,12 @@ Public aString As String[][] = []
 Public $tEditor As TextEditor
 Public hold As Boolean = False
 Public mMacro As MacroRecorder
+
 Public sHigh_SH_Compat As String = "sh"
 
 Public Enum sPath, sModified, bChanged, vType, sFunctions
-Public eTag As Array = ["", "", False, ["", 0, False, "unknown filetype"], [["", ""]]]
+
+Public eTagDef As Array = ["", "", False, ["", 0, False, "unknown filetype"], [["", ""]]]
 
 
 Public Sub Test_sh()
@@ -30,7 +32,6 @@ Catch
 sHigh_SH_Compat = "c"
 HighList[9] = "(upgrade for sh)"
 End
-
 
 
 Public Sub Form_Open()
@@ -69,7 +70,7 @@ SetHLMenu("none")
  If LoadOnStart <> "" Then 
   LoadFile(LoadOnStart)
  Else
-  $tEditor.Tag = eTag
+  $tEditor.Tag = eTagDef
  Endif
 
 Recents2Menu()
@@ -79,6 +80,7 @@ Recents2Menu()
 
 'mMacro = New MacroRecorder($tEditor)
 'mMacro.Record()
+$tEditor.SetFocus()
 
  Catch
     Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
@@ -359,7 +361,7 @@ If fOptions.Visible Then fOptions.Close()
 Settings["Config/WinDims"] = [Me.Left, Me.Top, Me.Width, Me.Height]
 
 Dim i As Integer
-For i = 0 To Tabs.Count - 2
+For i = 0 To Tabs.Count - 1
 
 Me.Tag = CheckChangeOnClose(i)
  If Me.Tag = 3 Then
@@ -429,7 +431,7 @@ textLines = a.Count
 
 For Each s In a
   sString = Trim(s)
- Select $tEditor.Tag[vType][1]
+ Select cbSearch.Index
  Case 1
    
   ins = InStr(RTrim(sString), "()", String.Len(sString) - 2)
@@ -456,6 +458,7 @@ For Each s In a
    If ins <> 0 Then TrimFName()
  Case 2
   ins = InStr(sString, "() {", sString.Len - 4)
+   If ins <> 0 Then TrimFName()
  Case 3
   ins = TrimFName("Public Sub ")
   If ins <> 1 Then ins = TrimFName("Private Sub ")
@@ -527,17 +530,23 @@ Me.Title = "Loading file..."
 Object.Lock($tEditor)
 $tEditor.Load(FileName)
 Object.UnLock($tEditor)
-eTag = NewTag()
-eTag[sPath] = FileName
-eTag[sModified] = Stat(FileName).LastModified
-$tEditor.Tag = eTag
+
+$tEditor.Tag = eTagDef
+$tEditor.Tag[sPath] = FileName
+$tEditor.Tag[sModified] = Stat(FileName).LastModified
+
+
+Object.Lock(Me.cbExeFlag)
+Me.cbExeFlag.Value = Access(FileName, gb.Exec)
+Object.UnLock(Me.cbExeFlag)
+
 
  Tabs[Tabs.Index].Text = File.Name(FileName)
  
  If CheckFileType() Then
    Message.Error("File not text type!")
  Else
-   ReadtoList()
+   ReadtoList(False, True)
  Endif
 
 Catch
@@ -554,6 +563,8 @@ If sFile = "" Then
 Else
  Dialog.Path = sFile
 Endif
+
+If Not Access(Dialog.Path, gb.Write) Then MenuOpARThis_Click(Dialog.Path)
 
 If NewTab Then MenuNewTab_Click()
 Wait
@@ -600,7 +611,7 @@ End
 
 
 Public Sub Form_Resize()
-HSplit1.Layout = [FMain.Width - FuncGviewWidth, FuncGviewWidth]
+HSplit1.Layout = [FMain.Width - FuncGviewWidth - 7, FuncGviewWidth]
 'FMain.Refresh()
 End
 
@@ -668,8 +679,8 @@ Public Sub cbSearch_Click()
 If cbSearch.Index = 0 Then Return
 
 cbSearch.Tag = cbSearch.Index
-ReadtoList()
-cbSearch.Index = 0
+ReadtoList(False, True)
+'cbSearch.Index = 0
 End
 
 Public Sub MenuOpARThis_Click(Optional FileName As String = "")
@@ -678,9 +689,9 @@ Dim s As String
   If User.Name <> "root" Then
   s = Args[0]
    If s[0, 2] = "./" 
-    s = Application.sPath & "/" & s[2, s.Len - 2]
+    s = Application.Path & "/" & s[2, s.Len - 2]
    Else If InStr(Args[0], "/") = 0 Then
-    s = Application.sPath & "/" & s
+    s = Application.Path & "/" & s
    Endif
 
   Shell Quote(s) & " -r -f '" & IIf(FileName = "", $tEditor.Tag[sPath], FileName) & "'"
@@ -858,14 +869,21 @@ End
 
 
 Public Sub TextEditor1_KeyPress()
+If Not Key.Code Then Return
 Select Key.Code
   Case Key.Return, Key.Enter
-    ReadtoList(True)
+    ReadtoList(True, True)
     Case Key.BackSpace, Key.Del
       If $tEditor.Count <> textLines Then ReadtoList(True, True)
 End Select
 SrchBox.Tag = $tEditor.Line
+' If Not $tEditor.Tag[bChanged] Then $tEditor.Tag[bChanged] = True
+
+Catch
+    Message.Error(Error.Text & "\n" & Error.Where & "\n" & Error.Backtrace.Join("\n"))
+
 End
+
 
 
 Public Sub Btn_Reload_Click()
@@ -873,7 +891,7 @@ Public Sub Btn_Reload_Click()
  $tEditor.Load($tEditor.Tag[sPath])
  $tEditor.Tag[sModified] = Stat($tEditor.Tag[sPath]).LastModified
  $tEditor.Tag[bChanged] = False
- ReadtoList(True)
+ ReadtoList(True, True)
 
 End
 
@@ -896,30 +914,10 @@ Catch
     Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
 End
 
-Public Sub MenuShel_Click()
-Btn_Save_Click(True)
-If p Then p.Kill()
+Public Sub RunCom_Click()
 
-With TermF.TView
-.Clear()
- ' If Not p Then p = .Exec(["bash"])
-TermF.Show()
-TermF.Activate()
-TermF.TView.SetFocus()
+Commands.RunScript()
 
-Wait 0.5
-'.Input("cd " & Quote(File.Dir(TabPanel1[TabPanel1.Index].Tag[0])) & "\n")
-.Clear()
-TermF.Title = "Running: " & $tEditor.Tag[sPath]
-p = .Exec([$tEditor.Tag[sPath]], ["2>&1"])
-.SetFocus()
-End With
-While p.State = Process.Running
-  Wait
-Wend
-
-If p Then p.Kill()
-If fOptions.cbCloseTerm.Value Then TermF.Close()
 End
 
 Public Sub MenuCut_Click()
@@ -948,6 +946,10 @@ End
 Public Sub Btn_Search_Click(Optional Advanced As Boolean)
 Dim bBackToStart As Boolean = False
 Dim iCase, iEnd, iStep As Integer
+
+If mMacro Then
+  If mMacro.State = mMacro.Recording Then mMacro.AddKeySym("F3")
+Endif
 
 If Me.SrchBox.Text = "" Then
 fSearch.Show()
@@ -997,7 +999,7 @@ End
 
 Public Sub BtnExecCom_Click()
 
-  MenuShel_Click()
+ Commands.RunScript()
 
 End
 
@@ -1007,6 +1009,11 @@ Public Sub SrchBox_Change()
 
 End
 
+Public Sub MenuFindNext_Click()
+
+  Btn_Search_Click()
+
+End
 
 Public Sub SrchBox_Activate()
 
@@ -1057,22 +1064,24 @@ End
 
 
 Public Sub MenuNewTab_Click()
-  Dim nEd As TextEditor
 
    Object.Lock(Tabs)
    Tabs.Count += 1
    Tabs.Index = Tabs.Count - 1
    Tabs.Text = "New file" & Str(Tabs.Count - 1)
-   nEd = New TextEditor(Tabs) As "TextEditor1"
-   $tEditor = nEd
+   Object.UnLock(Tabs)
+
+   $tEditor = New TextEditor(Tabs) As "TextEditor1"
    $tEditor.Name = "TextEditor" & Str(Tabs.Count)
    $tEditor.Tag = NewTag()
    Object.Lock($tEditor)
    $tEditor.SetFocus()
    Object.UnLock($tEditor)
-   Tabs.Refresh()
-   Object.UnLock(Tabs)
-FuncGview.Rows.Count = 0
+'   Tabs.Refresh()
+
+   Object.Lock(FuncGview)
+   FuncGview.Rows.Count = 0
+   Object.UnLock(FuncGview)
   
 End
 
@@ -1094,17 +1103,10 @@ Public Sub Mnu_CloseTab_Click(Optional iIndex As Integer = Tabs.Index)
   $tEditor.Delete()
   Tabs[iIndex].Delete()
 CheckFileType(True)
-ReadtoList()
+ReadtoList(True)
 
 Catch
     Message.Error(Error.Text & "\n" & Error.Backtrace.Join("\n"))
-End
-
-
-Public Sub MenuMacroStop_Click()
-
-If mMacro.State = mMacro.Recording Then mMacro.Stop()
-Debug mMacro.Data.Count
 End
 
 Public Sub Tabs_Close(Index As Integer)
@@ -1142,11 +1144,75 @@ Public Sub NewType_Click()
        $tEditor.Text = "#!/usr/bin/env gbs3\n\n' Gambas script file\n\n"
     Case "gambas-gui"
       SetFileType("gambas", 3, True, "Gambas Shell Script")
+        $tEditor.Text = "#!/usr/bin/env gbs3\n\n' Gambas script file\n\nUse \"gb.image\"\nUse \"gb.gui\"\nUse \"gb.form\"\nUse \"gb.form.stock\"\nUse \"gb.util\"\n\nPublic Sub Main()\n\n\nEnd\n\n"
       Case Else
         Return
   End Select
 
-'CheckFileType(True)
+ReadtoList(True, True)
 LoadHighlights()
 $tEditor.Tag[bChanged] = True
 End
+
+Public Sub cbExeFlag_Click()
+If Not Exist($tEditor.Tag[sPath]) Then Return
+
+  Shell "chmod " & IIf(Last.Value, "+", "-") & "x " & Quote($tEditor.Tag[sPath])
+
+End
+
+
+Public Sub Button2_Click()
+
+   MenuMacroStart_Click()
+
+End
+
+Public Sub Button4_Click()
+
+   MenuMacroPlay_Click()
+
+End
+
+Public Sub Button3_Click()
+
+  MenuMacroStop_Click()
+
+End
+
+Public Sub MenuMacroStop_Click()
+
+If mMacro Then mMacro.Stop()
+
+End
+
+Public Sub MenuMacroStart_Click()
+If Not mMacro Then 
+mMacro = New MacroRecorder
+mMacro.Editor = $tEditor
+Else
+mMacro.Editor = $tEditor
+Endif
+
+  mMacro.Record()
+
+End
+
+Public Sub MenuMacroPlay_Click()
+
+If mMacro Then mMacro.Play()
+
+End
+
+Public Sub MenuMacroClear_Click()
+
+ If mMacro Then mMacro.Free()
+
+End
+
+Public Sub Button5_Click()
+
+  MenuMacroClear_Click()
+
+End
+

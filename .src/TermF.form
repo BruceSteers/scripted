@@ -23,16 +23,22 @@
       MoveScaled(23,0,4,4)
       Picture = Picture["icon:/24/clear"]
     }
-    { Spring1 Spring
-      MoveScaled(76,1,4,2)
+    { lTermInfo Label
+      MoveScaled(33,1,63,3)
+      Expand = True
+      AutoResize = True
+      Alignment = Align.Center
     }
-    { ToolButton1 ToolButton
+    { Spring1 Spring
+      MoveScaled(99,1,4,2)
+    }
+    { tbCloseTerm ToolButton
       MoveScaled(104,0,4,4)
       Picture = Picture["icon:/24/close"]
     }
   }
   { TView TerminalView
-    MoveScaled(0,4,108,37)
+    MoveScaled(0,4,109,37)
     Expand = True
     AutoResize = False
   }
