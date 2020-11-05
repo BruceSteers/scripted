@@ -1,0 +1,44 @@
+' Gambas module file
+
+Export
+
+Public Sub RunScript()
+Dim p As Process
+
+FMain.Btn_Save_Click(True)
+
+FMain.$tEditor = FMain.ActiveEditor()
+With TermF.TView
+.Clear()
+ ' If Not p Then p = .Exec(["bash"])
+TermF.Show()
+TermF.Activate()
+.SetFocus()
+
+Wait 0.5
+.Clear()
+End With
+With FMain
+Dim aSt As String[] = [.$tEditor.Tag[.sPath], "2>&1"]
+
+If Not Access(.$tEditor.Tag[.sPath], gb.Exec) Then
+  If .$tEditor.Tag[.vType][0] = "gambas" Then aSt.Add("gbs3", 0)
+Endif
+
+TermF.lTermInfo.Text = "Running: " & .$tEditor.Tag[.sPath]
+End With
+
+Try p = TermF.TView.Exec(aSt)
+TermF.TView.SetFocus()
+While p.State = Process.Running
+  Wait 1
+Wend
+TermF.lTermInfo.Text = "ScriptED: Command exited..."
+If p Then p.Kill()
+If fOptions.cbCloseTerm.Value Then TermF.Close()
+  
+
+Catch
+    Message.Error(Error.Text & "\n" & Error.Where & "\n" & Error.Backtrace.Join("\n"))
+
+End
