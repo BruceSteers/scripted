@@ -87,7 +87,7 @@ $bAlt = Key.Alt
 
 sVar = GetKey(Key.Code, Key.Text)
   'Debug String.Code(sVar)
-  Debug sVar.len
+  'Debug sVar.len
   If String.Code(sVar) = 3 Then 
     AddControlChar("c")
     Return
@@ -105,7 +105,7 @@ sVar = GetKey(Key.Code, Key.Text)
   Endif
 
 If sVar.Len >= 2 Then 
-  Debug "is >= 2"
+ ' Debug "is >= 2"
  sVar = Left(Right(sVar, -1), -1)
  Try sVar = Conv(sVar, "UTF-8", "LATIN1")
 Endif
@@ -124,8 +124,9 @@ Public Sub AddKeyChar(sChar As String)
   
   $sBuffer.Add("ISO_Level3_Shift")
   $bModKey.Add([True, True])
+  Try sChar = Conv(sChar, "UTF-8", "LATIN1")
   $sBuffer.Add(sChar)
-  $bModKey.Add([False, True])
+  $bModKey.Add([False, False])
   $sBuffer.Add("ISO_Level3_Shift")
   $bModKey.Add([True, False])
   
@@ -229,7 +230,7 @@ Public Sub Stop()
  If $sBuffer.Count > 0 Then
    Dim c As Integer
    For c = 0 To $sBuffer.Max
-     Debug $sBuffer[c]; "; "; $bModKey[c][0]; " "; $bModKey[c][1]
+     'Debug $sBuffer[c]; "; "; $bModKey[c][0]; " "; $bModKey[c][1]
    Next
  Endif
 $TextObject.SetFocus()
@@ -409,7 +410,7 @@ Case Key.Tab
  Return "[Tab]"
 Case Else
   
-Debug "getkey: sChar: '"; sChar; "' Chr code: "; String.Code(sChar)
+'Debug "getkey: sChar: '"; sChar; "' Chr code: "; String.Code(sChar)
 Return sChar
 End Select
   

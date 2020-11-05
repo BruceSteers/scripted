@@ -1069,16 +1069,17 @@ Public Sub MenuNewTab_Click()
    Tabs.Count += 1
    Tabs.Index = Tabs.Count - 1
    Tabs.Text = "New file" & Str(Tabs.Count - 1)
-   Object.UnLock(Tabs)
-
+  Wait
    $tEditor = New TextEditor(Tabs) As "TextEditor1"
+   Wait
    $tEditor.Name = "TextEditor" & Str(Tabs.Count)
    $tEditor.Tag = NewTag()
+   $tEditor.Refresh()
    Object.Lock($tEditor)
    $tEditor.SetFocus()
    Object.UnLock($tEditor)
 '   Tabs.Refresh()
-
+   Object.Unlock(Tabs)
    Object.Lock(FuncGview)
    FuncGview.Rows.Count = 0
    Object.UnLock(FuncGview)
